@@ -1,0 +1,31 @@
+# Credentials & secrets
+config/credentials.json
+config/key.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Données locales (exports Winpharma, logs, sorties)
+input/
+output/
+logs/
+
+# Dossier PWA (versionné séparément dans pwa/)
+pwa/
+
+# Claude
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
