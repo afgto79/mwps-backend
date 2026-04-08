@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <title>MWPS — Dashboard Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:        #fdf6ee;
+      --card:      #ffffff;
+      --accent:    #ff6b35;
+      --accent-lt: #fff3ed;
+      --txt1:      #1a1208;
+      --txt2:      #6b5d4f;
+      --border:    #f0e4d4;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --yellow:    #f59e0b;
+      --shadow:    0 2px 10px rgba(255,107,53,.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: 'Nunito Sans', sans-serif;
+      background: var(--bg);
+      color: var(--txt1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 16px;
+      height: 100vh;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .h-title {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 20px;
+      color: var(--accent);
+      letter-spacing: -.5px;
+    }
+    .h-title span { color: var(--txt2); font-weight: 700; }
+    .h-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--txt2);
+      font-weight: 600;
+    }
+    .h-date { font-weight: 700; color: var(--txt1); }
+    .refresh-pill {
+      background: var(--accent-lt);
+      border: 1px solid #ffd9c4;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 70px;
+      text-align: center;
+    }
+
+    /* ── OPERATOR CARDS ─────────────────────────────────────── */
+    #cards-row {
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .op-card {
+      flex: 1;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      border: 1.5px solid var(--border);
+      overflow: hidden;
+    }
+    .op-card.alert-card { border-color: #fca5a5; }
+    .op-card-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 12px 6px;
+    }
+    .op-badge {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900; font-size: 13px; color: white;
+      flex-shrink: 0;
+    }
+    .op-name {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700; font-size: 12px;
+      line-height: 1.2;
+    }
+    .streak-pill {
+      margin-left: auto;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 9px;
+      background: #fff8f0; border: 1px solid #ffd9c4;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .streak-pill.high {
+      background: #fef9c3; border-color: #fde047; color: #854d0e;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+    .op-kpis {
+      display: flex;
+      gap: 6px;
+      padding: 4px 12px 8px;
+    }
+    .kpi-block {
+      flex: 1;
+      background: var(--bg);
+      border-radius: 9px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .kpi-lbl {
+      font-size: 9px; font-weight: 700;
+      color: var(--txt2);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 2px;
+    }
+    .kpi-val {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900; font-size: 20px; line-height: 1;
+    }
+    .kpi-val.green { color: var(--green); }
+    .kpi-val.orange { color: var(--yellow); }
+    .kpi-val.red { color: var(--red); }
+    .kpi-val.neutral { color: var(--txt2); }
+    .kpi-sub {
+      font-size: 9px; font-weight: 600; color: var(--txt2); margin-top: 1px;
+    }
+
+    .alerts-wrap {
+      padding: 0 12px 8px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .alert-row {
+      border-radius: 5px;
+      padding: 3px 7px;
+      font-size: 9px; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .alert-row.danger { background: #fee2e2; color: #991b1b; }
+    .alert-row.ok     { background: #dcfce7; color: #166534; }
+    .alert-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+    }
+
+    /* ── MIDDLE ROW ─────────────────────────────────────────── */
+    #middle-row {
+      display: flex;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* leaderboard */
+    .lb-panel {
+      width: 250px; flex-shrink: 0;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      border: 1.5px solid var(--border);
+      padding: 12px;
+      display: flex; flex-direction: column;
+    }
+    .panel-title {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900; font-size: 10px;
+      color: var(--txt2);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .lb-item {
+      display: flex; align-items: center; gap: 7px;
+      margin-bottom: 7px;
+    }
+    .lb-rank {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900; font-size: 13px;
+      width: 16px; color: var(--txt2); flex-shrink: 0;
+    }
+    .lb-rank.g1 { color: #f59e0b; }
+    .lb-rank.g2 { color: #94a3b8; }
+    .lb-rank.g3 { color: #c4762a; }
+    .lb-badge-sm {
+      width: 26px; height: 26px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900; font-size: 10px; color: white;
+      flex-shrink: 0;
+    }
+    .lb-bars {
+      flex: 1; display: flex; flex-direction: column; gap: 2px;
+    }
+    .lb-bar-hd {
+      font-size: 10px; font-weight: 700;
+      display: flex; justify-content: space-between;
+    }
+    .lb-track {
+      height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden;
+    }
+    .lb-fill {
+      height: 100%; border-radius: 4px;
+      transition: width 1s ease;
+    }
+
+    /* charts */
+    .charts-wrap {
+      flex: 1; display: flex; gap: 10px;
+    }
+    .chart-card {
+      flex: 1; background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      border: 1.5px solid var(--border);
+      padding: 12px;
+      display: flex; flex-direction: column;
+      min-height: 0;
+    }
+    .chart-inner {
+      flex: 1; position: relative; min-height: 0;
+    }
+
+    /* ── OBJECTIVES ROW ─────────────────────────────────────── */
+    #obj-row {
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .obj-card {
+      flex: 1; background: var(--card);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      border: 1.5px solid var(--border);
+      padding: 10px 12px;
+    }
+    .obj-head {
+      display: flex; align-items: center; gap: 7px;
+      margin-bottom: 7px;
+    }
+    .obj-name {
+      font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px;
+    }
+    .obj-days {
+      margin-left: auto; font-size: 9px; color: var(--txt2); font-weight: 600;
+    }
+    .obj-kpis { display: flex; gap: 8px; }
+    .obj-kpi { flex: 1; }
+    .obj-lbl {
+      font-size: 9px; font-weight: 700; color: var(--txt2);
+      text-transform: uppercase; margin-bottom: 3px;
+    }
+    .obj-track {
+      height: 9px; background: var(--bg); border-radius: 5px; overflow: hidden; margin-bottom: 2px;
+    }
+    .obj-fill {
+      height: 100%; border-radius: 5px; transition: width 1.2s ease;
+    }
+    .obj-pct {
+      font-size: 10px; font-weight: 700;
+    }
+    .obj-pct-sub { font-size: 9px; font-weight: 400; color: var(--txt2); }
+
+    /* ── LOADING ───────────────────────────────────────────── */
+    #loading {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px; z-index: 999;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-txt {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700; font-size: 13px; color: var(--txt2);
+    }
+    .no-data {
+      color: var(--txt2); font-size: 12px; font-style: italic;
+      text-align: center; padding: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="spinner-txt">Chargement des données…</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="h-title">MWPS <span>· Dashboard Manager</span></div>
+  <div class="h-right">
+    <div class="h-date" id="hdr-date">—</div>
+    <div>MAJ : <span id="hdr-time">—</span></div>
+    <div class="refresh-pill">↻ <span id="countdown">60</span>s</div>
+  </div>
+</header>
+
+<!-- OPERATOR CARDS -->
+<div id="cards-row"></div>
+
+<!-- MIDDLE -->
+<div id="middle-row">
+  <div class="lb-panel">
+    <div class="panel-title">Classement · Taux PCA</div>
+    <div id="lb-content"></div>
+  </div>
+  <div class="charts-wrap">
+    <div class="chart-card">
+      <div class="panel-title">Tendance PMHO — mois courant</div>
+      <div class="chart-inner"><canvas id="ch-pmho"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="panel-title">Tendance Taux PCA — mois courant</div>
+      <div class="chart-inner"><canvas id="ch-pca"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- OBJECTIVES -->
+<div id="obj-row"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const SHEETS_ID = '1BsxJb2phBCdcO0GC8ErufjWDYGvY1QQevRr_xDTbnFU';
+const API_KEY   = 'AIzaSyCOFBY73439nd4-tByfYTTRMOjthI4rPdA'; // Google Cloud Console → mwps-pho-2026
+
+const OPS = {
+  '1': { initials: 'DP', color: '#ff6b35', nom: 'DE PREMONT' },
+  '2': { initials: 'CD', color: '#3b82f6', nom: 'DUCHE CHRISTELLE' },
+  '7': { initials: 'FM', color: '#22c55e', nom: 'MAGALHAES' },
+  '8': { initials: 'CC', color: '#8b5cf6', nom: 'CARUANA' },
+};
+const OP_IDS = ['1','2','7','8'];
+
+let chPMHO = null, chPCA = null;
+let cdTimer = null;
+
+// ── SHEETS API v4 ─────────────────────────────────────────────────────────
+// Retourne un tableau d'objets [{col: val, ...}] depuis une feuille nommée.
+// Nécessite API Key avec permission Google Sheets API (pas de CORS).
+async function fetchSheet(sheetName) {
+  const range = encodeURIComponent(`${sheetName}`);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${range}?key=${API_KEY}&majorDimension=ROWS`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(`Sheets API ${r.status} — ${err?.error?.message || sheetName}`);
+  }
+  const json = await r.json();
+  return parseSheetValues(json.values || []);
+}
+
+function parseSheetValues(rows) {
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (row[i] || '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function normalizeDate(d) {
+  if (!d) return '';
+  d = d.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  // Excel serial
+  if (/^\d{5}$/.test(d)) {
+    const dt = new Date((+d - 25569) * 86400000);
+    return dt.toISOString().slice(0, 10);
+  }
+  // DD/MM/YYYY
+  const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return d;
+}
+
+function boolVal(v) {
+  return v === 'TRUE' || v === 'true' || v === '1' || v === 'True';
+}
+
+// parseFloat robuste : accepte virgule OU point décimal
+function pf(v) { return parseFloat((v || '').replace(',', '.')); }
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+function colorClass(val, target) {
+  if (val == null || isNaN(val)) return 'neutral';
+  const r = val / target;
+  if (r >= 0.95) return 'green';
+  if (r >= 0.75) return 'orange';
+  return 'red';
+}
+
+function colorHex(cls) {
+  return cls === 'green' ? '#22c55e' : cls === 'orange' ? '#f59e0b' : cls === 'red' ? '#ef4444' : '#94a3b8';
+}
+
+function fPMHO(v) { return v != null && !isNaN(v) ? (+v).toFixed(2) + '€' : '—'; }
+function fPCA(v)  { return v != null && !isNaN(v) ? Math.round(+v * 100) + '%' : '—'; }
+
+// ── RENDER CARDS ─────────────────────────────────────────────────────────────
+function renderCards(latestData, latestFlags, targets) {
+  const el = document.getElementById('cards-row');
+  el.innerHTML = '';
+  OP_IDS.forEach(id => {
+    const m = OPS[id];
+    const d = latestData[id] || {};
+    const f = latestFlags[id] || {};
+    const t = targets[id] || { cible_PMHO: '15', cible_taux_PCA: '0.67' };
+    const noData = !Object.keys(d).length;
+
+    const pmho    = noData ? null : pf(d.PMHO);
+    const pca     = noData ? null : pf(d.taux_acceptation);
+    const streakP = parseInt(f.streak_PCA  || 0);
+    const streakM = parseInt(f.streak_PMHO || 0);
+    const streak  = Math.max(streakP, streakM);
+
+    const subPMHO = boolVal(f.sous_cible_PMHO_3j);
+    const subPCA  = boolVal(f.sous_cible_PCA_3j);
+    const progPCA = boolVal(f.progression_PCA);
+    const hasAlert = subPMHO || subPCA;
+
+    const cPMHO = colorClass(pmho, pf(t.cible_PMHO));
+    const cPCA  = colorClass(pca,  pf(t.cible_taux_PCA));
+
+    const card = document.createElement('div');
+    card.className = 'op-card' + (hasAlert ? ' alert-card' : '');
+
+    let alertsHTML = '';
+    if (subPMHO)  alertsHTML += `<div class="alert-row danger"><div class="alert-dot"></div>PMHO sous cible 3j consécutifs</div>`;
+    if (subPCA)   alertsHTML += `<div class="alert-row danger"><div class="alert-dot"></div>PCA sous cible 3j consécutifs</div>`;
+    if (progPCA)  alertsHTML += `<div class="alert-row ok"><div class="alert-dot"></div>En progression PCA</div>`;
+
+    const streakHTML = streak > 0
+      ? `<div class="streak-pill${streak >= 7 ? ' high' : ''}">🔥 ${streak}j</div>` : '';
+
+    card.innerHTML = `
+      <div class="op-card-head">
+        <div class="op-badge" style="background:${m.color}">${m.initials}</div>
+        <div class="op-name">${m.nom}</div>
+        ${streakHTML}
+      </div>
+      <div class="op-kpis">
+        <div class="kpi-block">
+          <div class="kpi-lbl">PMHO</div>
+          <div class="kpi-val ${cPMHO}">${fPMHO(pmho)}</div>
+          <div class="kpi-sub">cible ${t.cible_PMHO}€</div>
+        </div>
+        <div class="kpi-block">
+          <div class="kpi-lbl">Taux PCA</div>
+          <div class="kpi-val ${cPCA}">${fPCA(pca)}</div>
+          <div class="kpi-sub">cible ${Math.round(pf(t.cible_taux_PCA)*100)}%</div>
+        </div>
+      </div>
+      ${alertsHTML ? `<div class="alerts-wrap">${alertsHTML}</div>` : ''}
+    `;
+    el.appendChild(card);
+  });
+}
+
+// ── RENDER LEADERBOARD ────────────────────────────────────────────────────────
+function renderLB(latestData, targets) {
+  const el = document.getElementById('lb-content');
+  const sorted = OP_IDS
+    .map(id => ({ id, pca: latestData[id]?.taux_acceptation != null ? pf(latestData[id].taux_acceptation) : null }))
+    .filter(o => o.pca != null)
+    .sort((a,b) => b.pca - a.pca);
+
+  if (!sorted.length) { el.innerHTML = '<div class="no-data">Aucune donnée</div>'; return; }
+
+  const max = sorted[0].pca;
+  const rankCls = ['g1','g2','g3','',''];
+
+  el.innerHTML = sorted.map((o,i) => {
+    const m = OPS[o.id];
+    const t = targets[o.id] || { cible_taux_PCA: '0.67' };
+    const cls = colorClass(o.pca, pf(t.cible_taux_PCA));
+    const pct = max > 0 ? Math.round((o.pca/max)*100) : 0;
+    return `
+      <div class="lb-item">
+        <div class="lb-rank ${rankCls[i]}">${i+1}</div>
+        <div class="lb-badge-sm" style="background:${m.color}">${m.initials}</div>
+        <div class="lb-bars">
+          <div class="lb-bar-hd">
+            <span>${m.nom.split(' ')[0]}</span>
+            <span style="color:${colorHex(cls)}">${fPCA(o.pca)}</span>
+          </div>
+          <div class="lb-track">
+            <div class="lb-fill" style="width:${pct}%;background:${m.color}"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── RENDER CHARTS ─────────────────────────────────────────────────────────────
+function renderCharts(allData) {
+  const dates = [...new Set(allData.map(r => r.date))].sort();
+  if (!dates.length) return;
+  const lastDate = dates[dates.length - 1];
+  const ym = lastDate.slice(0, 7);
+  const monthDates = dates.filter(d => d.startsWith(ym));
+  const labels = monthDates.map(d => parseInt(d.slice(8)));
+
+  const commonOpts = (suffix, yMin, yMax) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: { font: { family: 'Nunito Sans', weight: '700', size: 10 }, boxWidth: 10, padding: 8, usePointStyle: true }
+      },
+      tooltip: {
+        callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y != null ? c.parsed.y.toFixed(1)+suffix : '—'}` }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { font: { family: 'Nunito Sans', size: 10 }, color: '#6b5d4f', maxRotation: 0 },
+        grid: { color: '#f0e4d4' }
+      },
+      y: {
+        ...(yMin != null ? { min: yMin } : {}),
+        ...(yMax != null ? { max: yMax } : {}),
+        ticks: { font: { family: 'Nunito Sans', size: 10 }, color: '#6b5d4f', callback: v => v.toFixed(0)+suffix },
+        grid: { color: '#f0e4d4' }
+      }
+    }
+  });
+
+  const mkDataset = (id, valFn) => {
+    const m = OPS[id];
+    return {
+      label: m.initials,
+      data: monthDates.map(d => {
+        const row = allData.find(r => r.operateur_id === id && r.date === d && pf(r.nb_ventes_comptoir_j || 0) > 0);
+        return row ? valFn(row) : null;
+      }),
+      borderColor: m.color,
+      backgroundColor: m.color + '20',
+      borderWidth: 2,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      spanGaps: true,
+    };
+  };
+
+  if (chPMHO) chPMHO.destroy();
+  if (chPCA)  chPCA.destroy();
+
+  chPMHO = new Chart(document.getElementById('ch-pmho'), {
+    type: 'line',
+    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => pf(r.PMHO) || null)) },
+    options: commonOpts('€', null, null),
+  });
+
+  chPCA = new Chart(document.getElementById('ch-pca'), {
+    type: 'line',
+    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => r.taux_acceptation ? pf(r.taux_acceptation)*100 : null)) },
+    options: commonOpts('%', 0, 100),
+  });
+}
+
+// ── RENDER OBJECTIVES ────────────────────────────────────────────────────────
+function renderObjectives(allData, targets) {
+  const el = document.getElementById('obj-row');
+  el.innerHTML = '';
+  const dates = [...new Set(allData.map(r => r.date))].sort();
+  if (!dates.length) return;
+  const ym = dates[dates.length-1].slice(0,7);
+
+  OP_IDS.forEach(id => {
+    const m = OPS[id];
+    const t = targets[id] || { cible_PMHO: '15', cible_taux_PCA: '0.67' };
+    const rows = allData.filter(r => r.operateur_id === id && r.date.startsWith(ym) && pf(r.nb_ventes_comptoir_j || 0) > 0);
+
+    let avgPMHO = null, avgPCA = null;
+    if (rows.length) {
+      const pv = rows.map(r => pf(r.PMHO)).filter(v => !isNaN(v));
+      const cv = rows.map(r => pf(r.taux_acceptation)).filter(v => !isNaN(v));
+      if (pv.length) avgPMHO = pv.reduce((a,b)=>a+b,0)/pv.length;
+      if (cv.length) avgPCA  = cv.reduce((a,b)=>a+b,0)/cv.length;
+    }
+
+    const cPMHO  = pf(t.cible_PMHO);
+    const cPCA   = pf(t.cible_taux_PCA);
+    const pctPMHO = avgPMHO != null ? Math.min(Math.round((avgPMHO/cPMHO)*100), 100) : 0;
+    const pctPCA  = avgPCA  != null ? Math.min(Math.round((avgPCA /cPCA )*100), 100) : 0;
+    const hPMHO   = colorHex(colorClass(avgPMHO, cPMHO));
+    const hPCA    = colorHex(colorClass(avgPCA,  cPCA));
+
+    const card = document.createElement('div');
+    card.className = 'obj-card';
+    card.innerHTML = `
+      <div class="obj-head">
+        <div class="lb-badge-sm" style="background:${m.color}">${m.initials}</div>
+        <div class="obj-name">${m.nom}</div>
+        <div class="obj-days">${rows.length}j · mois courant</div>
+      </div>
+      <div class="obj-kpis">
+        <div class="obj-kpi">
+          <div class="obj-lbl">PMHO moy.</div>
+          <div class="obj-track"><div class="obj-fill" style="width:${pctPMHO}%;background:${hPMHO}"></div></div>
+          <div class="obj-pct" style="color:${hPMHO}">${fPMHO(avgPMHO)} <span class="obj-pct-sub">(${pctPMHO}% cible)</span></div>
+        </div>
+        <div class="obj-kpi">
+          <div class="obj-lbl">Taux PCA moy.</div>
+          <div class="obj-track"><div class="obj-fill" style="width:${pctPCA}%;background:${hPCA}"></div></div>
+          <div class="obj-pct" style="color:${hPCA}">${fPCA(avgPCA)} <span class="obj-pct-sub">(${pctPCA}% cible)</span></div>
+        </div>
+      </div>`;
+    el.appendChild(card);
+  });
+}
+
+// ── MAIN LOAD ─────────────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [allData, allTgt, allFlags] = await Promise.all([
+      fetchSheet('data'), fetchSheet('targets'), fetchSheet('flags')
+    ]);
+
+    allData.forEach(r => { r.date = normalizeDate(r.date); });
+    allFlags.forEach(r => { r.date = normalizeDate(r.date); });
+
+    // Last working day (any operator has sales)
+    const activeDates = allData
+      .filter(r => pf(r.nb_ventes_comptoir_j || 0) > 0)
+      .map(r => r.date).sort();
+    const lastDay = activeDates.length ? activeDates[activeDates.length-1] : null;
+
+    // Latest data per operator (own last working day)
+    const latestData = {};
+    OP_IDS.forEach(id => {
+      const rows = allData
+        .filter(r => r.operateur_id === id && pf(r.nb_ventes_comptoir_j || 0) > 0)
+        .sort((a,b) => a.date.localeCompare(b.date));
+      if (rows.length) latestData[id] = rows[rows.length-1];
+    });
+
+    // Latest flags
+    const flagDates = [...new Set(allFlags.map(r => r.date))].sort();
+    const lastFlagDate = flagDates.length ? flagDates[flagDates.length-1] : null;
+    const latestFlags = {};
+    if (lastFlagDate) allFlags.filter(r => r.date === lastFlagDate).forEach(r => { latestFlags[r.operateur_id] = r; });
+
+    // Targets for current month
+    const ym = lastDay ? lastDay.slice(0,7) : '';
+    const ymCompact = ym.replace('-',''); // YYYYMM
+    const targets = {};
+    OP_IDS.forEach(id => {
+      const t = allTgt.find(r => r.operateur_id === id && (r.annee_mois === ym || r.annee_mois === ymCompact))
+             || allTgt.filter(r => r.operateur_id === id).sort((a,b) => a.annee_mois.localeCompare(b.annee_mois)).pop();
+      if (t) targets[id] = t;
+    });
+
+    // Update header
+    const now = new Date();
+    document.getElementById('hdr-date').textContent = lastDay
+      ? new Date(lastDay + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'long' })
+      : '—';
+    document.getElementById('hdr-time').textContent = now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+
+    // Render all sections
+    renderCards(latestData, latestFlags, targets);
+    renderLB(latestData, targets);
+    renderCharts(allData);
+    renderObjectives(allData, targets);
+
+    document.getElementById('loading').style.display = 'none';
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('loading').innerHTML = `
+      <div style="text-align:center;font-family:Nunito,sans-serif">
+        <div style="color:#ef4444;font-weight:900;font-size:15px;margin-bottom:6px">Erreur de chargement</div>
+        <div style="color:#6b5d4f;font-size:12px">${err.message}</div>
+        <div style="margin-top:10px;font-size:11px;color:#94a3b8">Vérifiez que la feuille Sheets est bien publique en lecture.</div>
+      </div>`;
+  }
+}
+
+// ── COUNTDOWN + AUTO-REFRESH ─────────────────────────────────────────────────
+function startCountdown() {
+  let n = 60;
+  const el = document.getElementById('countdown');
+  el.textContent = n;
+  if (cdTimer) clearInterval(cdTimer);
+  cdTimer = setInterval(async () => {
+    n--;
+    el.textContent = n;
+    if (n <= 0) {
+      clearInterval(cdTimer);
+      await loadAll();
+      startCountdown();
+    }
+  }, 1000);
+}
+
+loadAll().then(startCountdown);
+</script>
+</body>
+</html>
