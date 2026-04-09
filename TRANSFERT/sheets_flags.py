@@ -363,8 +363,10 @@ def compute_and_push_flags(
                 return None
             return round((sum(vals) / len(vals)) / cible_traj, 4)
 
-        traj_ratio_pmho = _traj_ratio(pmho_mois, cible_PMHO,     jours_ouvres) or ''
-        traj_ratio_pca  = _traj_ratio(taux_mois, cible_taux_PCA, jours_ouvres) or ''
+        _tr_pmho = _traj_ratio(pmho_mois, cible_PMHO,     jours_ouvres)
+        _tr_pca  = _traj_ratio(taux_mois, cible_taux_PCA, jours_ouvres)
+        traj_ratio_pmho = _tr_pmho if _tr_pmho is not None else ''
+        traj_ratio_pca  = _tr_pca  if _tr_pca  is not None else ''
 
         # 6. Alertes sous-cible 3 jours
         sous_pmho_3j = _compute_sous_cible_3j(all_data, op_id, 'PMHO',             cible_PMHO,     target_date, today_r)
