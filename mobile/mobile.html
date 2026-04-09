@@ -6,68 +6,44 @@
 <title>MWPS Mobile</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="../config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body { margin:0; font-family:'Nunito Sans'; background:#fdf6ee; }
-
 #app { max-width:420px; margin:auto; height:100vh; display:flex; flex-direction:column; }
-
 .tab { display:none; flex:1; overflow:auto; padding:12px; }
 .tab.active { display:block; }
 
-nav {
-  height:60px; display:flex; background:#fff; border-top:1px solid #eee;
-}
-nav button {
-  flex:1; border:none; background:none; font-size:11px;
-}
+nav { height:60px; display:flex; background:#fff; border-top:1px solid #eee; }
+nav button { flex:1; border:none; background:none; font-size:11px; }
 nav button.active { color:#ff6b35; border-top:2px solid #ff6b35; }
 
-/* cards */
 .card { background:#fff; border-radius:12px; padding:12px; margin-bottom:10px; }
-
-/* leaderboard */
 .row { display:flex; justify-content:space-between; margin-bottom:6px; }
-
 </style>
 </head>
 
 <body>
 <div id="app">
 
-<!-- KPI -->
 <div id="tab-kpi" class="tab active">
-  <div class="card">
-    <div>PMHO</div>
-    <div id="pmho">—</div>
-  </div>
-
-  <div class="card">
-    <div>Taux PCA</div>
-    <div id="pca">—</div>
-  </div>
+  <div class="card"><div>PMHO</div><div id="pmho">—</div></div>
+  <div class="card"><div>Taux PCA</div><div id="pca">—</div></div>
 </div>
 
-<!-- Classement -->
 <div id="tab-rank" class="tab">
-  <div class="card">
-    <div>Classement PCA</div>
-    <div id="ranking"></div>
-  </div>
+  <div class="card"><div>Classement PCA</div><div id="ranking"></div></div>
 </div>
 
-<!-- PMHO -->
 <div id="tab-pmho" class="tab">
   <canvas id="chart-pmho"></canvas>
 </div>
 
-<!-- PCA -->
 <div id="tab-pca" class="tab">
   <canvas id="chart-pca"></canvas>
 </div>
 
-<!-- NAV -->
 <nav>
   <button class="active" onclick="switchTab('kpi',this)">KPI</button>
   <button onclick="switchTab('rank',this)">Classement</button>
@@ -78,8 +54,8 @@ nav button.active { color:#ff6b35; border-top:2px solid #ff6b35; }
 </div>
 
 <script>
-const SHEETS_ID = '1BsxJb2phBCdcO0GC8ErufjWDYGvY1QQevRr_xDTbnFU';
-const API_KEY = 'AIzaSy...';
+const SHEETS_ID = CONFIG.SHEETS_ID;
+const API_KEY   = CONFIG.API_KEY;
 
 function switchTab(name, btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -88,51 +64,87 @@ function switchTab(name, btn){
   btn.classList.add('active');
 }
 
+function pf(v){ return parseFloat((v||'').replace(',','.')); }
+
+function normalizeDate(d){
+  if(!d) return '';
+  if(/^\d{5}$/.test(d)){
+    const dt=new Date((+d-25569)*86400000);
+    return dt.toISOString().slice(0,10);
+  }
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(d)){
+    const [j,m,a]=d.split('/');
+    return `${a}-${m}-${j}`;
+  }
+  return d;
+}
+
 async function fetchSheet(name){
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${name}?key=${API_KEY}`;
-  const r = await fetch(url);
-  const j = await r.json();
-  const h = j.values[0];
-  return j.values.slice(1).map(r=>{
-    let o={}; h.forEach((k,i)=>o[k]=r[i]); return o;
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${name}?key=${API_KEY}`;
+  const r=await fetch(url);
+  const j=await r.json();
+  const h=j.values[0];
+  return j.values.slice(1).map(row=>{
+    let o={};
+    h.forEach((k,i)=>o[k]=row[i]||'');
+    o.date=normalizeDate(o.date);
+    return o;
   });
 }
 
 async function init(){
   const data = await fetchSheet('data');
 
-  const latest = data[data.length-1];
+  // filtre jours actifs
+  const valid = data.filter(r=>pf(r.nb_ventes_comptoir_j)>0);
 
-  document.getElementById('pmho').textContent = latest.PMHO;
-  document.getElementById('pca').textContent = Math.round(latest.taux_acceptation*100)+'%';
+  // dernier jour global
+  const lastDate = valid.map(r=>r.date).sort().pop();
 
-  // ranking simple
+  const latest = valid.find(r=>r.date===lastDate);
+
+  // KPI
+  document.getElementById('pmho').textContent =
+    latest ? pf(latest.PMHO).toFixed(2)+'€' : '—';
+
+  document.getElementById('pca').textContent =
+    latest ? Math.round(pf(latest.taux_acceptation)*100)+'%' : '—';
+
+  // classement PCA
   const ops = {};
-  data.forEach(r=>{
-    if(!ops[r.operateur_id]) ops[r.operateur_id]=[];
-    ops[r.operateur_id].push(parseFloat(r.taux_acceptation));
+  valid.forEach(r=>{
+    const id=r.operateur_id;
+    if(!ops[id]) ops[id]=[];
+    ops[id].push(pf(r.taux_acceptation));
   });
 
-  const avg = Object.entries(ops).map(([id,arr])=>{
-    return {id, val: arr.reduce((a,b)=>a+b,0)/arr.length};
+  const ranking = Object.entries(ops).map(([id,arr])=>{
+    return {id, val:arr.reduce((a,b)=>a+b,0)/arr.length};
   }).sort((a,b)=>b.val-a.val);
 
   document.getElementById('ranking').innerHTML =
-    avg.map((o,i)=>`<div class="row"><span>#${i+1} OP${o.id}</span><span>${Math.round(o.val*100)}%</span></div>`).join('');
+    ranking.map((o,i)=>
+      `<div class="row"><span>#${i+1} OP${o.id}</span><span>${Math.round(o.val*100)}%</span></div>`
+    ).join('');
 
-  // charts
-  const labels = data.map(r=>r.date);
-  const pmhoVals = data.map(r=>parseFloat(r.PMHO));
-  const pcaVals = data.map(r=>parseFloat(r.taux_acceptation)*100);
+  // charts (mois courant)
+  const ym = lastDate.slice(0,7);
+  const month = valid.filter(r=>r.date.startsWith(ym));
+
+  const labels = month.map(r=>r.date.slice(8));
+  const pmhoVals = month.map(r=>pf(r.PMHO));
+  const pcaVals = month.map(r=>pf(r.taux_acceptation)*100);
 
   new Chart(document.getElementById('chart-pmho'), {
     type:'line',
-    data:{labels, datasets:[{data:pmhoVals}]}
+    data:{labels,datasets:[{data:pmhoVals,borderColor:'#ff6b35'}]},
+    options:{plugins:{legend:{display:false}}}
   });
 
   new Chart(document.getElementById('chart-pca'), {
     type:'line',
-    data:{labels, datasets:[{data:pcaVals}]}
+    data:{labels,datasets:[{data:pcaVals,borderColor:'#3b82f6'}]},
+    options:{plugins:{legend:{display:false}}}
   });
 }
 
