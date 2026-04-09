@@ -130,6 +130,26 @@ Anti-patterns à éviter : dashboard analytique dense, widgets multi-métriques,
 
 ---
 
+### Prochaine session — Dashboard manager (`afgto79/mwps-backend`)
+
+Appliquer les mêmes évolutions que la Phase 6 PWA sur `input/index.html.html` :
+
+- **Leaderboard** : passer de classement PCA → classement **PMHO mensuel moyen**
+  - Barres proportionnelles au leader (leader = 100%)
+  - Couleur = `colorClass(pmho_moy, cible_PMHO)`
+  - Valeur affichée : `fmtPMHO(avg)` au lieu de `fPCA(pca)`
+  - Titre : "CLASSEMENT · TAUX PCA" → "CLASSEMENT · PANIER MOYEN"
+
+- **Cartes opérateurs** : ajouter barres trajectoire mensuelle
+  - Lire `traj_ratio_PMHO` et `traj_ratio_PCA` depuis la feuille `flags`
+  - Barres colorées trajectoire (vert/orange/rouge) au lieu de valeur brute
+
+Fichier source local : `input/index.html.html`
+Repo cible : `afgto79/mwps-backend` → `index.html`
+Déploiement : GitHub Pages uniquement (pas de transfert serveur)
+
+---
+
 ### Phase 5 — Robustesse
 - Logs fichier sur le serveur (`main.py >> mwps.log 2>&1`) avec rotation
 - Alertes en cas d'échec (pas de données → notification manager)
@@ -178,5 +198,5 @@ Colonnes `traj_ratio_PMHO` et `traj_ratio_PCA` calculées dans `sheets_flags.py`
 | `pwa/index.html` | PWA opérateur (dashboard mobile) |
 | `pwa/config.js` | SHEETS_ID, API_KEY, OPERATORS |
 | `pwa/service-worker.js` | Cache PWA (v3) |
-| `input/mwps_dashboard_4b.html` | Copie locale du dashboard manager (déployé comme `index.html` dans `afgto79/mwps-backend`) |
+| `input/index.html.html` | Source du dashboard manager (= mwps_dashboard_4b.html, déployé comme `index.html` dans `afgto79/mwps-backend`) |
 | `TRANSFERT/` | Package à copier sur le serveur |
