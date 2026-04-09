@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MWPS Mobile</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { margin:0; font-family:'Nunito Sans'; background:#fdf6ee; }
+
+#app { max-width:420px; margin:auto; height:100vh; display:flex; flex-direction:column; }
+
+.tab { display:none; flex:1; overflow:auto; padding:12px; }
+.tab.active { display:block; }
+
+nav {
+  height:60px; display:flex; background:#fff; border-top:1px solid #eee;
+}
+nav button {
+  flex:1; border:none; background:none; font-size:11px;
+}
+nav button.active { color:#ff6b35; border-top:2px solid #ff6b35; }
+
+/* cards */
+.card { background:#fff; border-radius:12px; padding:12px; margin-bottom:10px; }
+
+/* leaderboard */
+.row { display:flex; justify-content:space-between; margin-bottom:6px; }
+
+</style>
+</head>
+
+<body>
+<div id="app">
+
+<!-- KPI -->
+<div id="tab-kpi" class="tab active">
+  <div class="card">
+    <div>PMHO</div>
+    <div id="pmho">—</div>
+  </div>
+
+  <div class="card">
+    <div>Taux PCA</div>
+    <div id="pca">—</div>
+  </div>
+</div>
+
+<!-- Classement -->
+<div id="tab-rank" class="tab">
+  <div class="card">
+    <div>Classement PCA</div>
+    <div id="ranking"></div>
+  </div>
+</div>
+
+<!-- PMHO -->
+<div id="tab-pmho" class="tab">
+  <canvas id="chart-pmho"></canvas>
+</div>
+
+<!-- PCA -->
+<div id="tab-pca" class="tab">
+  <canvas id="chart-pca"></canvas>
+</div>
+
+<!-- NAV -->
+<nav>
+  <button class="active" onclick="switchTab('kpi',this)">KPI</button>
+  <button onclick="switchTab('rank',this)">Classement</button>
+  <button onclick="switchTab('pmho',this)">PMHO</button>
+  <button onclick="switchTab('pca',this)">PCA</button>
+</nav>
+
+</div>
+
+<script>
+const SHEETS_ID = '1BsxJb2phBCdcO0GC8ErufjWDYGvY1QQevRr_xDTbnFU';
+const API_KEY = 'AIzaSy...';
+
+function switchTab(name, btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function fetchSheet(name){
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${name}?key=${API_KEY}`;
+  const r = await fetch(url);
+  const j = await r.json();
+  const h = j.values[0];
+  return j.values.slice(1).map(r=>{
+    let o={}; h.forEach((k,i)=>o[k]=r[i]); return o;
+  });
+}
+
+async function init(){
+  const data = await fetchSheet('data');
+
+  const latest = data[data.length-1];
+
+  document.getElementById('pmho').textContent = latest.PMHO;
+  document.getElementById('pca').textContent = Math.round(latest.taux_acceptation*100)+'%';
+
+  // ranking simple
+  const ops = {};
+  data.forEach(r=>{
+    if(!ops[r.operateur_id]) ops[r.operateur_id]=[];
+    ops[r.operateur_id].push(parseFloat(r.taux_acceptation));
+  });
+
+  const avg = Object.entries(ops).map(([id,arr])=>{
+    return {id, val: arr.reduce((a,b)=>a+b,0)/arr.length};
+  }).sort((a,b)=>b.val-a.val);
+
+  document.getElementById('ranking').innerHTML =
+    avg.map((o,i)=>`<div class="row"><span>#${i+1} OP${o.id}</span><span>${Math.round(o.val*100)}%</span></div>`).join('');
+
+  // charts
+  const labels = data.map(r=>r.date);
+  const pmhoVals = data.map(r=>parseFloat(r.PMHO));
+  const pcaVals = data.map(r=>parseFloat(r.taux_acceptation)*100);
+
+  new Chart(document.getElementById('chart-pmho'), {
+    type:'line',
+    data:{labels, datasets:[{data:pmhoVals}]}
+  });
+
+  new Chart(document.getElementById('chart-pca'), {
+    type:'line',
+    data:{labels, datasets:[{data:pcaVals}]}
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>
