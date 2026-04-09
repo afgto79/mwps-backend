@@ -6,10 +6,23 @@ Ordre de calcul : cible_j → streak → records → best_team → objectifs men
 """
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from sheets_client import api_call, get_service, load_settings, read_sheet
+
+_EXCEL_EPOCH = date(1899, 12, 30)
+
+
+def _normalize_date_str(v) -> str:
+    """Convertit un serial Excel ou une date formatée en ISO 'YYYY-MM-DD'."""
+    try:
+        n = int(float(str(v)))
+        if n > 40000:
+            return (_EXCEL_EPOCH + timedelta(days=n)).isoformat()
+    except (ValueError, TypeError):
+        pass
+    return str(v)
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +266,10 @@ def compute_and_push_flags(
     today_normalized = [_normalize_row(r) for r in today_rows]
     all_data = historical + today_normalized
 
+    # Normaliser les dates (serials Excel → ISO) pour que les comparaisons fonctionnent
+    for r in all_data:
+        r['date'] = _normalize_date_str(r.get('date', ''))
+
     # ── Lecture des cibles ──────────────────────────────────────────────────
     targets_raw = read_sheet(service, spreadsheet_id, TARGETS_SHEET)
     targets_map: dict[tuple, dict] = {}
@@ -346,8 +363,8 @@ def compute_and_push_flags(
                 return None
             return round((sum(vals) / len(vals)) / cible_traj, 4)
 
-        traj_ratio_pmho = _traj_ratio(pmho_mois, cible_PMHO,     jours_ouvres)
-        traj_ratio_pca  = _traj_ratio(taux_mois, cible_taux_PCA, jours_ouvres)
+        traj_ratio_pmho = _traj_ratio(pmho_mois, cible_PMHO,     jours_ouvres) or ''
+        traj_ratio_pca  = _traj_ratio(taux_mois, cible_taux_PCA, jours_ouvres) or ''
 
         # 6. Alertes sous-cible 3 jours
         sous_pmho_3j = _compute_sous_cible_3j(all_data, op_id, 'PMHO',             cible_PMHO,     target_date, today_r)
