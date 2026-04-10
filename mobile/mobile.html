@@ -365,13 +365,8 @@ nav button.active {
 const SHEETS_ID = '1BsxJb2phBCdcO0GC8ErufjWDYGvY1QQevRr_xDTbnFU';
 const API_KEY   = 'AIzaSyCOFBY73439nd4-tByfYTTRMOjthI4rPdA';
 
-const OPS = {
-  '1': { initials: 'DP', color: '#ff6b35', nom: 'DE PREMONT' },
-  '2': { initials: 'CD', color: '#3b82f6', nom: 'DUCHE' },
-  '7': { initials: 'FM', color: '#22c55e', nom: 'MAGALHAES' },
-  '8': { initials: 'CC', color: '#8b5cf6', nom: 'CARUANA' },
-};
-const OP_IDS = ['1','2','7','8'];
+let OPS    = {};  // chargé dynamiquement depuis la feuille `operators`
+let OP_IDS = [];
 
 let chPMHO = null, chPCA = null;
 
@@ -629,6 +624,15 @@ function renderCharts(allData, lastDay) {
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function loadAll() {
   try {
+    // Charger les opérateurs actifs en premier
+    const opsRows = await fetchSheet('operators');
+    OPS    = {};
+    OP_IDS = [];
+    opsRows.filter(r => r.actif === 'TRUE' || r.actif === 'true' || r.actif === '1').forEach(r => {
+      OPS[r.id] = { initials: r.initials, color: r.color || '#94a3b8', nom: r.nom };
+      OP_IDS.push(r.id);
+    });
+
     const [allData, allTgt, allFlags] = await Promise.all([
       fetchSheet('data'), fetchSheet('targets'), fetchSheet('flags')
     ]);
