@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-04-10_
+_Mis à jour : 2026-04-10 (session 2)_
 
 ---
 
@@ -60,6 +60,7 @@ PWA (GitHub Pages)
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
 - [x] Lecture opérateurs actifs depuis feuille Sheets `operators` au démarrage (fallback operators.json)
+- [x] Fix date TXT : utilise `data_date` (date du fichier XLS J) au lieu de `target_date` (date du run) pour filtrer les entrées PCA/PCR — évite PCA=0 quand le script tourne le lendemain
 
 ### PWA (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
@@ -104,11 +105,17 @@ PWA (GitHub Pages)
 - [ ] Vérifier que le dashboard manager se rafraîchit correctement sur le PC comptoir
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
 - [ ] Ajouter `"9"` à la liste `ignore` dans `operators.json` pour supprimer le WARNING MP des logs (cosmétique)
-- [ ] **Remplir la feuille `operators`** dans Sheets (colonnes : id | initials | nom | color | actif)
+- [x] Feuille `operators` créée dans Sheets
+- [ ] **Compléter la feuille `operators`** : vérifier que tous les opérateurs actifs y sont (1, 2, 7, 8) — sinon warning "non présent dans la feuille operators" dans les logs
 
 ---
 
 ## Intentions pour la suite
+
+### Capacité Google Sheets
+- Limite officielle : 10 millions de cellules. À ~10 000 cellules/an (5 op × 250j × 8 col), aucun risque pratique.
+- Performance API : `fetchSheet('data')` charge toutes les lignes. Acceptable jusqu'à ~5 000–10 000 lignes (10–20 ans). Si besoin : limiter le fetch aux 12 derniers mois.
+- Le format d'affichage des dates dans Sheets (colonne A) peut être changé librement — le code lit la valeur brute, pas le format visuel.
 
 ### Gestion des opérateurs ✅ FAIT
 
