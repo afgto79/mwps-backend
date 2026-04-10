@@ -3,153 +3,702 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MWPS Mobile</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
-<script src="../config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+<title>MWPS Manager Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-body { margin:0; font-family:'Nunito Sans'; background:#fdf6ee; }
-#app { max-width:420px; margin:auto; height:100vh; display:flex; flex-direction:column; }
-.tab { display:none; flex:1; overflow:auto; padding:12px; }
-.tab.active { display:block; }
+:root {
+  --bg:       #fdf6ee;
+  --card:     #ffffff;
+  --accent:   #ff6b35;
+  --accent-lt:#fff3ed;
+  --txt1:     #1a1208;
+  --txt2:     #6b5d4f;
+  --border:   #f0e4d4;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --orange:   #f59e0b;
+  --muted:    #d1c4b6;
+  --shadow:   0 2px 10px rgba(255,107,53,.10);
+  --nav-h:    58px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-nav { height:60px; display:flex; background:#fff; border-top:1px solid #eee; }
-nav button { flex:1; border:none; background:none; font-size:11px; }
-nav button.active { color:#ff6b35; border-top:2px solid #ff6b35; }
+body {
+  font-family: 'Nunito Sans', sans-serif;
+  background: var(--bg);
+  color: var(--txt1);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-.card { background:#fff; border-radius:12px; padding:12px; margin-bottom:10px; }
-.row { display:flex; justify-content:space-between; margin-bottom:6px; }
+/* ── HEADER ──────────────────────────────── */
+header {
+  padding: 10px 14px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.h-title {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 17px;
+  color: var(--accent);
+  letter-spacing: -.3px;
+}
+.h-title span { color: var(--txt2); font-weight: 700; }
+.h-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--txt2);
+  text-align: right;
+  line-height: 1.4;
+}
+.h-date strong { color: var(--txt1); display: block; }
+
+/* ── TABS ────────────────────────────────── */
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  display: none;
+  padding: 10px 12px;
+  padding-bottom: calc(var(--nav-h) + 8px);
+}
+.tab-content.active { display: block; }
+
+/* charts tab needs flex to fill height */
+.tab-content.chart-tab {
+  display: none;
+  flex-direction: column;
+  padding-bottom: calc(var(--nav-h) + 8px);
+}
+.tab-content.chart-tab.active { display: flex; }
+
+/* ── NAV ─────────────────────────────────── */
+nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  display: flex;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  z-index: 10;
+}
+nav button {
+  flex: 1;
+  border: none;
+  background: none;
+  font-family: 'Nunito Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--txt2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 2px 8px;
+  cursor: pointer;
+  transition: color .15s;
+}
+nav button .nav-icon { font-size: 18px; line-height: 1; }
+nav button.active {
+  color: var(--accent);
+  border-top: 2px solid var(--accent);
+}
+
+/* ── OPERATOR CARDS ──────────────────────── */
+.op-card {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.op-card.alert-card { border-color: #fca5a5; }
+
+.op-card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px 6px;
+}
+.op-badge {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900; font-size: 13px; color: white;
+  flex-shrink: 0;
+}
+.op-name {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700; font-size: 13px;
+  line-height: 1.2;
+  flex: 1;
+}
+.streak-pill {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 9px;
+  background: #fff8f0; border: 1px solid #ffd9c4;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.streak-pill.high {
+  background: #fef9c3; border-color: #fde047; color: #854d0e;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+
+.op-kpis {
+  display: flex;
+  gap: 8px;
+  padding: 4px 12px 8px;
+}
+.kpi-block {
+  flex: 1;
+  background: var(--bg);
+  border-radius: 9px;
+  padding: 7px 10px;
+}
+.kpi-lbl {
+  font-size: 9px; font-weight: 700;
+  color: var(--txt2);
+  text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 2px;
+}
+.kpi-val {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900; font-size: 22px; line-height: 1;
+}
+.kpi-val.green  { color: var(--green); }
+.kpi-val.orange { color: var(--orange); }
+.kpi-val.red    { color: var(--red); }
+.kpi-val.neutral{ color: var(--txt2); }
+.kpi-sub {
+  font-size: 9px; font-weight: 600; color: var(--txt2); margin: 2px 0 4px;
+}
+.traj-track {
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.traj-fill {
+  height: 100%; border-radius: 3px;
+  transition: width 1s ease;
+}
+
+.alerts-wrap {
+  padding: 0 12px 8px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.alert-row {
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; gap: 5px;
+}
+.alert-row.danger { background: #fee2e2; color: #991b1b; }
+.alert-row.ok     { background: #dcfce7; color: #166534; }
+.alert-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+
+/* ── LEADERBOARD ─────────────────────────── */
+.lb-card {
+  background: var(--card);
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+.panel-title {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900; font-size: 10px;
+  color: var(--txt2);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.lb-item {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.lb-rank {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900; font-size: 14px;
+  width: 18px; color: var(--txt2); flex-shrink: 0; text-align: center;
+}
+.lb-rank.g1 { color: #f59e0b; }
+.lb-rank.g2 { color: #94a3b8; }
+.lb-rank.g3 { color: #c4762a; }
+.lb-badge-sm {
+  width: 28px; height: 28px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900; font-size: 10px; color: white;
+  flex-shrink: 0;
+}
+.lb-bars { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.lb-bar-hd {
+  font-size: 11px; font-weight: 700;
+  display: flex; justify-content: space-between;
+}
+.lb-track {
+  height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden;
+}
+.lb-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 1s ease;
+}
+
+/* ── CHARTS ──────────────────────────────── */
+.chart-wrap {
+  flex: 1;
+  background: var(--card);
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 12px;
+  margin: 10px 12px;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+}
+.chart-inner { flex: 1; position: relative; min-height: 220px; }
+
+/* ── LOADING ─────────────────────────────── */
+#loading {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 10px; z-index: 999;
+}
+.spinner {
+  width: 34px; height: 34px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner-txt {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700; font-size: 13px; color: var(--txt2);
+}
+.no-data {
+  color: var(--txt2); font-size: 12px; font-style: italic;
+  text-align: center; padding: 20px 0;
+}
 </style>
 </head>
-
 <body>
-<div id="app">
 
-<div id="tab-kpi" class="tab active">
-  <div class="card"><div>PMHO</div><div id="pmho">—</div></div>
-  <div class="card"><div>Taux PCA</div><div id="pca">—</div></div>
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="spinner-txt">Chargement…</div>
 </div>
 
-<div id="tab-rank" class="tab">
-  <div class="card"><div>Classement PCA</div><div id="ranking"></div></div>
+<!-- HEADER -->
+<header>
+  <div class="h-title">MWPS <span>· Manager</span></div>
+  <div class="h-date">
+    <strong id="hdr-date">—</strong>
+    <span id="hdr-time">—</span>
+  </div>
+</header>
+
+<!-- TAB: KPI -->
+<div id="tab-kpi" class="tab-content active">
+  <div id="cards-container"></div>
 </div>
 
-<div id="tab-pmho" class="tab">
-  <canvas id="chart-pmho"></canvas>
+<!-- TAB: CLASSEMENT -->
+<div id="tab-rank" class="tab-content">
+  <div class="lb-card">
+    <div class="panel-title">Classement · Panier moyen mois</div>
+    <div id="lb-content"></div>
+  </div>
 </div>
 
-<div id="tab-pca" class="tab">
-  <canvas id="chart-pca"></canvas>
+<!-- TAB: PMHO chart -->
+<div id="tab-pmho" class="tab-content chart-tab">
+  <div class="chart-wrap">
+    <div class="panel-title">Tendance PMHO — mois courant</div>
+    <div class="chart-inner"><canvas id="ch-pmho"></canvas></div>
+  </div>
 </div>
 
+<!-- TAB: PCA chart -->
+<div id="tab-pca" class="tab-content chart-tab">
+  <div class="chart-wrap">
+    <div class="panel-title">Tendance Taux PCA — mois courant</div>
+    <div class="chart-inner"><canvas id="ch-pca"></canvas></div>
+  </div>
+</div>
+
+<!-- NAV -->
 <nav>
-  <button class="active" onclick="switchTab('kpi',this)">KPI</button>
-  <button onclick="switchTab('rank',this)">Classement</button>
-  <button onclick="switchTab('pmho',this)">PMHO</button>
-  <button onclick="switchTab('pca',this)">PCA</button>
+  <button class="active" onclick="switchTab('kpi',this)">
+    <span class="nav-icon">📋</span>KPI
+  </button>
+  <button onclick="switchTab('rank',this)">
+    <span class="nav-icon">🏆</span>Classement
+  </button>
+  <button onclick="switchTab('pmho',this)">
+    <span class="nav-icon">📈</span>PMHO
+  </button>
+  <button onclick="switchTab('pca',this)">
+    <span class="nav-icon">💊</span>PCA
+  </button>
 </nav>
 
-</div>
-
 <script>
-const SHEETS_ID = CONFIG.SHEETS_ID;
-const API_KEY   = CONFIG.API_KEY;
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const SHEETS_ID = '1BsxJb2phBCdcO0GC8ErufjWDYGvY1QQevRr_xDTbnFU';
+const API_KEY   = 'AIzaSyCOFBY73439nd4-tByfYTTRMOjthI4rPdA';
 
-function switchTab(name, btn){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+name).classList.add('active');
+const OPS = {
+  '1': { initials: 'DP', color: '#ff6b35', nom: 'DE PREMONT' },
+  '2': { initials: 'CD', color: '#3b82f6', nom: 'DUCHE' },
+  '7': { initials: 'FM', color: '#22c55e', nom: 'MAGALHAES' },
+  '8': { initials: 'CC', color: '#8b5cf6', nom: 'CARUANA' },
+};
+const OP_IDS = ['1','2','7','8'];
+
+let chPMHO = null, chPCA = null;
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
   btn.classList.add('active');
 }
 
-function pf(v){ return parseFloat((v||'').replace(',','.')); }
+// ── SHEETS API ────────────────────────────────────────────────────────────────
+async function fetchSheet(sheetName) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${encodeURIComponent(sheetName)}?key=${API_KEY}&majorDimension=ROWS`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(`Sheets ${r.status} — ${err?.error?.message || sheetName}`);
+  }
+  const json = await r.json();
+  const rows = json.values || [];
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (row[i] || '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
 
-function normalizeDate(d){
-  if(!d) return '';
-  if(/^\d{5}$/.test(d)){
-    const dt=new Date((+d-25569)*86400000);
-    return dt.toISOString().slice(0,10);
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function normalizeDate(d) {
+  if (!d) return '';
+  d = d.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  if (/^\d{5}$/.test(d)) {
+    const dt = new Date((+d - 25569) * 86400000);
+    return dt.toISOString().slice(0, 10);
   }
-  if(/^\d{2}\/\d{2}\/\d{4}$/.test(d)){
-    const [j,m,a]=d.split('/');
-    return `${a}-${m}-${j}`;
-  }
+  const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
   return d;
 }
 
-async function fetchSheet(name){
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${name}?key=${API_KEY}`;
-  const r=await fetch(url);
-  const j=await r.json();
-  const h=j.values[0];
-  return j.values.slice(1).map(row=>{
-    let o={};
-    h.forEach((k,i)=>o[k]=row[i]||'');
-    o.date=normalizeDate(o.date);
-    return o;
+function pf(v) { return parseFloat((v || '').replace(',', '.')); }
+function boolVal(v) { return v === 'TRUE' || v === 'true' || v === '1' || v === 'True'; }
+
+function colorClass(val, target) {
+  if (val == null || isNaN(val) || !target) return 'neutral';
+  const r = val / target;
+  if (r >= 0.95) return 'green';
+  if (r >= 0.75) return 'orange';
+  return 'red';
+}
+function colorHex(cls) {
+  return cls === 'green'  ? '#22c55e'
+       : cls === 'orange' ? '#f59e0b'
+       : cls === 'red'    ? '#ef4444'
+       :                    '#94a3b8';
+}
+function trajColor(ratio) {
+  if (ratio === null || isNaN(ratio)) return '#d1c4b6';
+  if (ratio >= 0.95) return '#22c55e';
+  if (ratio >= 0.80) return '#f59e0b';
+  return '#ef4444';
+}
+
+function fPMHO(v) { return (v != null && !isNaN(v)) ? (+v).toFixed(2).replace('.', ',') + '€' : '—'; }
+function fPCA(v)  { return (v != null && !isNaN(v)) ? Math.round(+v * 100) + '%' : '—'; }
+
+// ── RENDER KPI CARDS ──────────────────────────────────────────────────────────
+function renderCards(latestData, latestFlags, targets) {
+  const el = document.getElementById('cards-container');
+  el.innerHTML = '';
+
+  OP_IDS.forEach(id => {
+    const m  = OPS[id];
+    const d  = latestData[id] || {};
+    const f  = latestFlags[id] || {};
+    const t  = targets[id] || { cible_PMHO: '15', cible_taux_PCA: '0.67' };
+    const noData = !Object.keys(d).length;
+
+    const pmho = noData ? null : pf(d.PMHO);
+    const pca  = noData ? null : pf(d.taux_acceptation);
+
+    const streakP = parseInt(f.streak_PCA  || 0);
+    const streakM = parseInt(f.streak_PMHO || 0);
+    const streak  = Math.max(streakP, streakM);
+
+    const subPMHO = boolVal(f.sous_cible_PMHO_3j);
+    const subPCA  = boolVal(f.sous_cible_PCA_3j);
+    const progPCA = boolVal(f.progression_PCA);
+
+    const cPMHO = colorClass(pmho, pf(t.cible_PMHO));
+    const cPCA  = colorClass(pca,  pf(t.cible_taux_PCA));
+
+    // trajectory ratios from flags
+    const trajPmho = pf(f.traj_ratio_PMHO);
+    const trajPca  = pf(f.traj_ratio_PCA);
+    const trPmhoW  = (trajPmho != null && !isNaN(trajPmho)) ? Math.min(100, trajPmho * 100) : (pmho && pf(t.cible_PMHO) > 0 ? Math.min(100, pmho / pf(t.cible_PMHO) * 100) : 0);
+    const trPcaW   = (trajPca  != null && !isNaN(trajPca))  ? Math.min(100, trajPca  * 100) : (pca  && pf(t.cible_taux_PCA) > 0 ? Math.min(100, pca  / pf(t.cible_taux_PCA)  * 100) : 0);
+    const trPmhoC  = (trajPmho != null && !isNaN(trajPmho)) ? trajColor(trajPmho) : colorHex(cPMHO);
+    const trPcaC   = (trajPca  != null && !isNaN(trajPca))  ? trajColor(trajPca)  : colorHex(cPCA);
+
+    let alertsHTML = '';
+    if (subPMHO) alertsHTML += `<div class="alert-row danger"><div class="alert-dot"></div>PMHO sous cible 3j consécutifs</div>`;
+    if (subPCA)  alertsHTML += `<div class="alert-row danger"><div class="alert-dot"></div>PCA sous cible 3j consécutifs</div>`;
+    if (progPCA) alertsHTML += `<div class="alert-row ok"><div class="alert-dot"></div>En progression PCA</div>`;
+
+    const streakHTML = streak > 0
+      ? `<div class="streak-pill${streak >= 7 ? ' high' : ''}">🔥 ${streak}j</div>` : '';
+
+    const card = document.createElement('div');
+    card.className = 'op-card' + ((subPMHO || subPCA) ? ' alert-card' : '');
+    card.innerHTML = `
+      <div class="op-card-head">
+        <div class="op-badge" style="background:${m.color}">${m.initials}</div>
+        <div class="op-name">${m.nom}</div>
+        ${streakHTML}
+      </div>
+      <div class="op-kpis">
+        <div class="kpi-block">
+          <div class="kpi-lbl">PMHO</div>
+          <div class="kpi-val ${cPMHO}">${fPMHO(pmho)}</div>
+          <div class="kpi-sub">cible ${pf(t.cible_PMHO) > 0 ? pf(t.cible_PMHO).toFixed(2).replace('.',',')+'€' : '—'}</div>
+          <div class="traj-track"><div class="traj-fill" style="width:${trPmhoW}%;background:${trPmhoC}"></div></div>
+        </div>
+        <div class="kpi-block">
+          <div class="kpi-lbl">Taux PCA</div>
+          <div class="kpi-val ${cPCA}">${fPCA(pca)}</div>
+          <div class="kpi-sub">cible ${pf(t.cible_taux_PCA) > 0 ? Math.round(pf(t.cible_taux_PCA)*100)+'%' : '—'}</div>
+          <div class="traj-track"><div class="traj-fill" style="width:${trPcaW}%;background:${trPcaC}"></div></div>
+        </div>
+      </div>
+      ${alertsHTML ? `<div class="alerts-wrap">${alertsHTML}</div>` : ''}
+    `;
+    el.appendChild(card);
   });
 }
 
-async function init(){
-  const data = await fetchSheet('data');
+// ── RENDER LEADERBOARD (PMHO mensuel moyen) ───────────────────────────────────
+function renderLeaderboard(allData, lastDay, targets) {
+  const el = document.getElementById('lb-content');
+  const ym = lastDay ? lastDay.slice(0, 7) : '';
+  if (!ym) { el.innerHTML = '<div class="no-data">Aucune donnée</div>'; return; }
 
-  // filtre jours actifs
-  const valid = data.filter(r=>pf(r.nb_ventes_comptoir_j)>0);
+  const opData = OP_IDS.map(id => {
+    const rows = allData.filter(r =>
+      r.operateur_id === id &&
+      r.date.startsWith(ym) &&
+      pf(r.nb_ventes_comptoir_j || 0) > 0
+    );
+    const vals = rows.map(r => pf(r.PMHO)).filter(v => !isNaN(v));
+    const avg  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const t    = targets[id] || { cible_PMHO: '15' };
+    const cible = pf(t.cible_PMHO);
+    return { id, avg, cible };
+  }).filter(o => o.avg !== null);
 
-  // dernier jour global
-  const lastDate = valid.map(r=>r.date).sort().pop();
+  if (!opData.length) { el.innerHTML = '<div class="no-data">Aucune donnée mensuelle</div>'; return; }
 
-  const latest = valid.find(r=>r.date===lastDate);
+  opData.sort((a, b) => b.avg - a.avg);
+  const maxAvg = opData[0].avg;
+  const rankCls = ['g1', 'g2', 'g3', ''];
 
-  // KPI
-  document.getElementById('pmho').textContent =
-    latest ? pf(latest.PMHO).toFixed(2)+'€' : '—';
+  el.innerHTML = opData.map((o, i) => {
+    const m   = OPS[o.id];
+    const cls = colorClass(o.avg, o.cible);
+    const hex = colorHex(cls);
+    const pct = maxAvg > 0 ? Math.round((o.avg / maxAvg) * 100) : 0;
+    return `
+      <div class="lb-item">
+        <div class="lb-rank ${rankCls[i] || ''}">${i + 1}</div>
+        <div class="lb-badge-sm" style="background:${m.color}">${m.initials}</div>
+        <div class="lb-bars">
+          <div class="lb-bar-hd">
+            <span>${m.nom}</span>
+            <span style="color:${hex}">${fPMHO(o.avg)}</span>
+          </div>
+          <div class="lb-track">
+            <div class="lb-fill" style="width:${pct}%;background:${hex}"></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
 
-  document.getElementById('pca').textContent =
-    latest ? Math.round(pf(latest.taux_acceptation)*100)+'%' : '—';
+// ── RENDER CHARTS ─────────────────────────────────────────────────────────────
+function renderCharts(allData, lastDay) {
+  const ym = lastDay ? lastDay.slice(0, 7) : '';
+  if (!ym) return;
 
-  // classement PCA
-  const ops = {};
-  valid.forEach(r=>{
-    const id=r.operateur_id;
-    if(!ops[id]) ops[id]=[];
-    ops[id].push(pf(r.taux_acceptation));
+  const dates = [...new Set(allData.map(r => r.date))].sort();
+  const monthDates = dates.filter(d => d.startsWith(ym));
+  const labels = monthDates.map(d => parseInt(d.slice(8)));
+
+  const commonOpts = (suffix, yMin, yMax) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: { font: { family: 'Nunito Sans', weight: '700', size: 10 }, boxWidth: 8, padding: 6, usePointStyle: true }
+      },
+      tooltip: {
+        callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y != null ? c.parsed.y.toFixed(1) + suffix : '—'}` }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { font: { family: 'Nunito Sans', size: 10 }, color: '#6b5d4f', maxRotation: 0 },
+        grid: { color: '#f0e4d4' }
+      },
+      y: {
+        ...(yMin != null ? { min: yMin } : {}),
+        ...(yMax != null ? { max: yMax } : {}),
+        ticks: { font: { family: 'Nunito Sans', size: 10 }, color: '#6b5d4f', callback: v => v.toFixed(0) + suffix },
+        grid: { color: '#f0e4d4' }
+      }
+    }
   });
 
-  const ranking = Object.entries(ops).map(([id,arr])=>{
-    return {id, val:arr.reduce((a,b)=>a+b,0)/arr.length};
-  }).sort((a,b)=>b.val-a.val);
-
-  document.getElementById('ranking').innerHTML =
-    ranking.map((o,i)=>
-      `<div class="row"><span>#${i+1} OP${o.id}</span><span>${Math.round(o.val*100)}%</span></div>`
-    ).join('');
-
-  // charts (mois courant)
-  const ym = lastDate.slice(0,7);
-  const month = valid.filter(r=>r.date.startsWith(ym));
-
-  const labels = month.map(r=>r.date.slice(8));
-  const pmhoVals = month.map(r=>pf(r.PMHO));
-  const pcaVals = month.map(r=>pf(r.taux_acceptation)*100);
-
-  new Chart(document.getElementById('chart-pmho'), {
-    type:'line',
-    data:{labels,datasets:[{data:pmhoVals,borderColor:'#ff6b35'}]},
-    options:{plugins:{legend:{display:false}}}
+  const mkDataset = (id, valFn) => ({
+    label: OPS[id].initials,
+    data: monthDates.map(d => {
+      const row = allData.find(r => r.operateur_id === id && r.date === d && pf(r.nb_ventes_comptoir_j || 0) > 0);
+      return row ? valFn(row) : null;
+    }),
+    borderColor: OPS[id].color,
+    backgroundColor: OPS[id].color + '22',
+    borderWidth: 2,
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    tension: 0.3,
+    spanGaps: true,
   });
 
-  new Chart(document.getElementById('chart-pca'), {
-    type:'line',
-    data:{labels,datasets:[{data:pcaVals,borderColor:'#3b82f6'}]},
-    options:{plugins:{legend:{display:false}}}
+  if (chPMHO) chPMHO.destroy();
+  if (chPCA)  chPCA.destroy();
+
+  chPMHO = new Chart(document.getElementById('ch-pmho'), {
+    type: 'line',
+    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => { const v = pf(r.PMHO); return !isNaN(v) ? v : null; })) },
+    options: commonOpts('€', null, null),
+  });
+
+  chPCA = new Chart(document.getElementById('ch-pca'), {
+    type: 'line',
+    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => { const v = pf(r.taux_acceptation); return !isNaN(v) ? v * 100 : null; })) },
+    options: commonOpts('%', 0, 100),
   });
 }
 
-init();
+// ── MAIN ──────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [allData, allTgt, allFlags] = await Promise.all([
+      fetchSheet('data'), fetchSheet('targets'), fetchSheet('flags')
+    ]);
+
+    // Normalize dates and decimals
+    allData.forEach(r => {
+      r.date              = normalizeDate(r.date);
+      r.PMHO              = String(r.PMHO).replace(',', '.');
+      r.taux_acceptation  = String(r.taux_acceptation).replace(',', '.');
+    });
+    allFlags.forEach(r => { r.date = normalizeDate(r.date); });
+
+    // Last active day (any operator with sales)
+    const activeDates = allData
+      .filter(r => pf(r.nb_ventes_comptoir_j || 0) > 0)
+      .map(r => r.date).sort();
+    const lastDay = activeDates.length ? activeDates[activeDates.length - 1] : null;
+
+    // Latest data per operator (own last working day)
+    const latestData = {};
+    OP_IDS.forEach(id => {
+      const rows = allData
+        .filter(r => r.operateur_id === id && pf(r.nb_ventes_comptoir_j || 0) > 0)
+        .sort((a, b) => a.date.localeCompare(b.date));
+      if (rows.length) latestData[id] = rows[rows.length - 1];
+    });
+
+    // Latest flags per operator
+    const flagDates = [...new Set(allFlags.map(r => r.date))].sort();
+    const lastFlagDate = flagDates.length ? flagDates[flagDates.length - 1] : null;
+    const latestFlags = {};
+    if (lastFlagDate) {
+      allFlags.filter(r => r.date === lastFlagDate).forEach(r => { latestFlags[r.operateur_id] = r; });
+    }
+
+    // Targets for current month
+    const ym = lastDay ? lastDay.slice(0, 7) : '';
+    const ymCompact = ym.replace('-', '');
+    const targets = {};
+    OP_IDS.forEach(id => {
+      const t = allTgt.find(r => r.operateur_id === id && (r.annee_mois === ym || r.annee_mois === ymCompact))
+             || allTgt.filter(r => r.operateur_id === id).sort((a, b) => a.annee_mois.localeCompare(b.annee_mois)).pop();
+      if (t) targets[id] = t;
+    });
+
+    // Header date
+    const now = new Date();
+    document.getElementById('hdr-date').textContent = lastDay
+      ? new Date(lastDay + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })
+      : '—';
+    document.getElementById('hdr-time').textContent = 'MAJ ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    renderCards(latestData, latestFlags, targets);
+    renderLeaderboard(allData, lastDay, targets);
+    renderCharts(allData, lastDay);
+
+    document.getElementById('loading').style.display = 'none';
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('loading').innerHTML = `
+      <div style="text-align:center;font-family:Nunito,sans-serif;padding:20px">
+        <div style="color:#ef4444;font-weight:900;font-size:15px;margin-bottom:6px">Erreur de chargement</div>
+        <div style="color:#6b5d4f;font-size:12px">${err.message}</div>
+        <div style="margin-top:8px;font-size:11px;color:#94a3b8">Vérifiez que la feuille Sheets est bien publique en lecture.</div>
+      </div>`;
+  }
+}
+
+loadAll();
 </script>
-
 </body>
 </html>
