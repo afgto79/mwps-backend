@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-04-09_
+_Mis à jour : 2026-04-10_
 
 ---
 
@@ -28,9 +28,10 @@ Winpharma
             └─ sheets_flags.py → feuille `flags` (records, streaks)
 
 Google Sheets (ID: 1BsxJb2phBCdcO0GC8ErufjWDYGvY1QQevRr_xDTbnFU)
-  ├─ data     : date | operateur_id | nom | nb_ventes | PMHO | nb_PCA | nb_PCR | taux
-  ├─ flags    : records, streaks, best_team, progression
-  └─ targets  : cibles mensuelles par opérateur (PMHO, taux_PCA, nb_propositions_j)
+  ├─ data      : date | operateur_id | nom | nb_ventes | PMHO | nb_PCA | nb_PCR | taux
+  ├─ flags     : records, streaks, best_team, progression, traj_ratio_PMHO, traj_ratio_PCA
+  ├─ targets   : cibles mensuelles par opérateur (PMHO, taux_PCA, nb_propositions_j)
+  └─ operators : id | initials | nom | color | actif  ← source de vérité pour les opérateurs
 
 PWA (GitHub Pages)
   └─ index.html + config.js + service-worker.js (cache mwps-v3)
@@ -54,14 +55,17 @@ PWA (GitHub Pages)
 - [x] Push Google Sheets avec idempotence (skip si date+opérateur déjà présent)
 - [x] Normalisation des dates Excel serial dans l'idempotence (`46121` → `2026-04-09`)
 - [x] Calcul flags : records perso, streaks, best_team, progression
+- [x] Calcul traj_ratio_PMHO et traj_ratio_PCA (feuille flags, colonnes Q et R)
 - [x] Suppression opérateur MP (ID 9) — warning informatif si encore dans les exports
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
+- [x] Lecture opérateurs actifs depuis feuille Sheets `operators` au démarrage (fallback operators.json)
 
-### PWA
+### PWA (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
 - [x] KPIs : PMHO, taux PCA, nb propositions, streak
-- [x] Section équipe (classement du jour)
+- [x] Barres trajectoire mensuelle glissante (traj_ratio_PMHO / traj_ratio_PCA depuis flags)
+- [x] Section équipe → PMHO mensuel moyen, barres proportionnelles au leader
 - [x] Onglet historique (graphiques Chart.js 12 mois)
 - [x] Messages coaching contextuels
 - [x] Confettis sur record ou streak ≥ 7
@@ -70,7 +74,24 @@ PWA (GitHub Pages)
 - [x] Design coaching/motivation (palette warm, Nunito, animations)
 - [x] Fix parsing décimales FR (`"0,3333"` → `parseFloat` correct)
 - [x] Manifest dynamique (PWA Android préserve `?op=X` à l'installation)
-- [x] SW cache v3
+- [x] SW cache v4
+- [x] Opérateurs chargés dynamiquement depuis feuille `operators` (reset CONFIG.OPERATORS avant sync)
+
+### Dashboard manager PC (afgto79/mwps-backend → index.html)
+- [x] Cartes par opérateur (PMHO + PCA + alertes 3j)
+- [x] Leaderboard PCA du dernier jour travaillé
+- [x] Graphiques line chart PMHO et PCA — mois courant
+- [x] Barre progression objectifs mensuels moyens
+- [x] Auto-refresh 60s avec compte à rebours
+- [x] Normalisation dates Excel serial + décimales FR
+- [x] Opérateurs chargés dynamiquement depuis feuille `operators`
+
+### Dashboard manager mobile (afgto79/mwps-backend → mobile/mobile.html)
+- [x] 4 onglets : KPI (cartes opérateurs), Classement PMHO mensuel, chart PMHO, chart PCA
+- [x] Cartes : PMHO + PCA + barres trajectoire + streak + alertes 3j
+- [x] Leaderboard PMHO mensuel moyen, barres proportionnelles au leader
+- [x] Opérateurs chargés dynamiquement depuis feuille `operators`
+- [x] URL : `https://afgto79.github.io/mwps-backend/mobile/mobile.html`
 
 ---
 
@@ -83,10 +104,19 @@ PWA (GitHub Pages)
 - [ ] Vérifier que le dashboard manager se rafraîchit correctement sur le PC comptoir
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
 - [ ] Ajouter `"9"` à la liste `ignore` dans `operators.json` pour supprimer le WARNING MP des logs (cosmétique)
+- [ ] **Remplir la feuille `operators`** dans Sheets (colonnes : id | initials | nom | color | actif)
 
 ---
 
 ## Intentions pour la suite
+
+### Gestion des opérateurs ✅ FAIT
+
+Source de vérité unique : feuille `operators` dans Google Sheets.
+- Ajouter un opérateur → nouvelle ligne, `actif=TRUE`
+- Suspendre → `actif=FALSE` (disparaît de tous les dashboards et de la PWA)
+- Backend (`main.py`) lit la feuille au démarrage et met à jour `operators_config` en mémoire. Fallback sur `operators.json` si Sheets indisponible.
+- Couleurs disponibles en plus des 4 actuelles : `#ec4899` `#06b6d4` `#f59e0b` `#84cc16` `#6366f1`
 
 ### Phase 4B — Dashboard manager ✅ FAIT — en beta test
 
@@ -129,24 +159,6 @@ Checklist à valider avant chaque livraison design :
 Anti-patterns à éviter : dashboard analytique dense, widgets multi-métriques, cible mensuelle fixe non glissante, notifications continues.
 
 ---
-
-### Prochaine session — Dashboard manager (`afgto79/mwps-backend`)
-
-Appliquer les mêmes évolutions que la Phase 6 PWA sur `input/index.html.html` :
-
-- **Leaderboard** : passer de classement PCA → classement **PMHO mensuel moyen**
-  - Barres proportionnelles au leader (leader = 100%)
-  - Couleur = `colorClass(pmho_moy, cible_PMHO)`
-  - Valeur affichée : `fmtPMHO(avg)` au lieu de `fPCA(pca)`
-  - Titre : "CLASSEMENT · TAUX PCA" → "CLASSEMENT · PANIER MOYEN"
-
-- **Cartes opérateurs** : ajouter barres trajectoire mensuelle
-  - Lire `traj_ratio_PMHO` et `traj_ratio_PCA` depuis la feuille `flags`
-  - Barres colorées trajectoire (vert/orange/rouge) au lieu de valeur brute
-
-Fichier source local : `input/index.html.html`
-Repo cible : `afgto79/mwps-backend` → `index.html`
-Déploiement : GitHub Pages uniquement (pas de transfert serveur)
 
 ---
 
@@ -198,5 +210,6 @@ Colonnes `traj_ratio_PMHO` et `traj_ratio_PCA` calculées dans `sheets_flags.py`
 | `pwa/index.html` | PWA opérateur (dashboard mobile) |
 | `pwa/config.js` | SHEETS_ID, API_KEY, OPERATORS |
 | `pwa/service-worker.js` | Cache PWA (v3) |
-| `input/index.html.html` | Source du dashboard manager (= mwps_dashboard_4b.html, déployé comme `index.html` dans `afgto79/mwps-backend`) |
+| `input/index.html.html` | Snapshot local du dashboard manager (référence — le vrai fichier déployé est `index.html` dans `afgto79/mwps-backend`) |
+| `mobile/mobile.html` | Dashboard manager mobile (déployé dans `afgto79/mwps-backend`) |
 | `TRANSFERT/` | Package à copier sur le serveur |
