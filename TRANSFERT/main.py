@@ -16,9 +16,9 @@ import json
 import logging
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
-from parser_xls import find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j
+from parser_xls import find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j, _extract_date_from_filename
 from parser_txt import find_txt_file, parse_txt
 from aggregator import aggregate
 
@@ -116,7 +116,11 @@ def main() -> int:
     if xls_j_path is None:
         logger.error('Fichier XLS J introuvable dans input\\')
         return 1
-    logger.info('XLS J trouvé : %s', os.path.basename(xls_j_path))
+
+    # Date réelle des données = date dans le nom du fichier XLS J (ex: au20260409)
+    # Peut différer de target_date si le script tourne le lendemain (ex: lundi pour vendredi)
+    data_date = _extract_date_from_filename(os.path.basename(xls_j_path)) or (target_date - timedelta(days=1))
+    logger.info('XLS J trouvé : %s  (date données : %s)', os.path.basename(xls_j_path), data_date.isoformat())
 
     if xls_j1_path is None:
         logger.warning('PMHO indisponible : fichier J-1 absent (1er du mois ou fichier manqué)')
@@ -160,18 +164,18 @@ def main() -> int:
 
     if txt_991 is not None:
         try:
-            pca_data = parse_txt(txt_991, target_date)
+            pca_data = parse_txt(txt_991, data_date)
         except Exception as e:
             logger.error('Erreur lecture TXT 991 : %s', e)
 
     if txt_990 is not None:
         try:
-            pcr_data = parse_txt(txt_990, target_date)
+            pcr_data = parse_txt(txt_990, data_date)
         except Exception as e:
             logger.error('Erreur lecture TXT 990 : %s', e)
 
     # --- Agrégation ---
-    rows = aggregate(target_date, xls_data, pmho_data, nb_ventes_j_data, pca_data, pcr_data, operators_config)
+    rows = aggregate(data_date, xls_data, pmho_data, nb_ventes_j_data, pca_data, pcr_data, operators_config)
 
     # --- Écriture CSV ---
     os.makedirs(OUTPUT_DIR, exist_ok=True)
