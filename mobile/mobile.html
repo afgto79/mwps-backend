@@ -207,6 +207,7 @@ nav button.active {
 }
 .alert-row.danger { background: #fee2e2; color: #991b1b; }
 .alert-row.ok     { background: #dcfce7; color: #166534; }
+.alert-row.warn   { background: #fef3c7; color: #92400e; }
 .alert-dot {
   width: 5px; height: 5px; border-radius: 50%;
   background: currentColor; flex-shrink: 0;
@@ -437,8 +438,22 @@ function trajColor(ratio) {
 function fPMHO(v) { return (v != null && !isNaN(v)) ? (+v).toFixed(2).replace('.', ',') + '€' : '—'; }
 function fPCA(v)  { return (v != null && !isNaN(v)) ? Math.round(+v * 100) + '%' : '—'; }
 
+// ── DATES MANQUANTES ──────────────────────────────────────────────────────────
+function getMissingDates(allData, opId) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutStr = cutoff.toISOString().slice(0, 10);
+  const workingDays = new Set(
+    allData.filter(r => r.date >= cutStr && pf(r.nb_ventes_comptoir_j || 0) > 0).map(r => r.date)
+  );
+  const opDays = new Set(
+    allData.filter(r => r.operateur_id === opId && r.date >= cutStr && pf(r.nb_ventes_comptoir_j || 0) > 0).map(r => r.date)
+  );
+  return [...workingDays].filter(d => !opDays.has(d)).sort().reverse();
+}
+
 // ── RENDER KPI CARDS ──────────────────────────────────────────────────────────
-function renderCards(latestData, latestFlags, targets) {
+function renderCards(latestData, latestFlags, targets, allData) {
   const el = document.getElementById('cards-container');
   el.innerHTML = '';
 
@@ -471,10 +486,18 @@ function renderCards(latestData, latestFlags, targets) {
     const trPmhoC  = (trajPmho != null && !isNaN(trajPmho)) ? trajColor(trajPmho) : colorHex(cPMHO);
     const trPcaC   = (trajPca  != null && !isNaN(trajPca))  ? trajColor(trajPca)  : colorHex(cPCA);
 
+    const missing = allData ? getMissingDates(allData, id) : [];
+    const fmt     = d => { const p = d.split('-'); return `${p[2]}/${p[1]}`; };
+
     let alertsHTML = '';
     if (subPMHO) alertsHTML += `<div class="alert-row danger"><div class="alert-dot"></div>PMHO sous cible 3j consécutifs</div>`;
     if (subPCA)  alertsHTML += `<div class="alert-row danger"><div class="alert-dot"></div>PCA sous cible 3j consécutifs</div>`;
     if (progPCA) alertsHTML += `<div class="alert-row ok"><div class="alert-dot"></div>En progression PCA</div>`;
+    if (missing.length) {
+      const shown  = missing.slice(0, 3).map(fmt).join(', ');
+      const suffix = missing.length > 3 ? ` +${missing.length - 3}` : '';
+      alertsHTML += `<div class="alert-row warn"><div class="alert-dot"></div>${missing.length} date${missing.length > 1 ? 's' : ''} manquante${missing.length > 1 ? 's' : ''} : ${shown}${suffix}</div>`;
+    }
 
     const streakHTML = streak > 0
       ? `<div class="streak-pill${streak >= 7 ? ' high' : ''}">🔥 ${streak}j</div>` : '';
@@ -685,7 +708,7 @@ async function loadAll() {
       : '—';
     document.getElementById('hdr-time').textContent = 'MAJ ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-    renderCards(latestData, latestFlags, targets);
+    renderCards(latestData, latestFlags, targets, allData);
     renderLeaderboard(allData, lastDay, targets);
     renderCharts(allData, lastDay);
 
