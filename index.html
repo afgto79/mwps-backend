@@ -452,7 +452,7 @@ function renderCards(latestData, latestFlags, targets, allData) {
     const noData = !Object.keys(d).length;
 
     const pmho    = noData ? null : pf(d.PMHO);
-    const pca     = noData ? null : pf(d.taux_acceptation);
+    const pc      = noData ? null : (parseInt(d.nb_PCA) || 0) + (parseInt(d.nb_PCR) || 0);
     const streakP = parseInt(f.streak_PCA  || 0);
     const streakM = parseInt(f.streak_PMHO || 0);
     const streak  = Math.max(streakP, streakM);
@@ -462,8 +462,9 @@ function renderCards(latestData, latestFlags, targets, allData) {
     const progPCA = boolVal(f.progression_PCA);
     const hasAlert = subPMHO || subPCA;
 
+    const ciblePC = pf(t.cible_nb_propositions_j);
     const cPMHO = colorClass(pmho, pf(t.cible_PMHO));
-    const cPCA  = colorClass(pca,  pf(t.cible_taux_PCA));
+    const cPC   = colorClass(pc,   ciblePC);
 
     const card = document.createElement('div');
     card.className = 'op-card' + (hasAlert ? ' alert-card' : '');
@@ -497,9 +498,9 @@ function renderCards(latestData, latestFlags, targets, allData) {
           <div class="kpi-sub">cible ${t.cible_PMHO}€</div>
         </div>
         <div class="kpi-block">
-          <div class="kpi-lbl">Taux PCA</div>
-          <div class="kpi-val ${cPCA}">${fPCA(pca)}</div>
-          <div class="kpi-sub">cible ${Math.round(pf(t.cible_taux_PCA)*100)}%</div>
+          <div class="kpi-lbl">Vol. Propositions</div>
+          <div class="kpi-val ${cPC}">${pc ?? '—'}</div>
+          <div class="kpi-sub">cible ${isNaN(ciblePC) ? '—' : ciblePC}/j</div>
         </div>
       </div>
       ${alertsHTML ? `<div class="alerts-wrap">${alertsHTML}</div>` : ''}
