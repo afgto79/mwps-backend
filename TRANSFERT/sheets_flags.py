@@ -16,13 +16,20 @@ _EXCEL_EPOCH = date(1899, 12, 30)
 
 def _normalize_date_str(v) -> str:
     """Convertit un serial Excel ou une date formatée en ISO 'YYYY-MM-DD'."""
+    import re
+    s = str(v).strip()
+    # Format français DD/MM/YYYY → YYYY-MM-DD
+    m = re.match(r'^(\d{2})/(\d{2})/(\d{4})$', s)
+    if m:
+        return f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
+    # Serial Excel
     try:
-        n = int(float(str(v)))
+        n = int(float(s))
         if n > 40000:
             return (_EXCEL_EPOCH + timedelta(days=n)).isoformat()
     except (ValueError, TypeError):
         pass
-    return str(v)
+    return s
 
 logger = logging.getLogger(__name__)
 
