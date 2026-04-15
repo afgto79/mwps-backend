@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-04-10 (session 2)_
+_Mis à jour : 2026-04-15 (session 4)_
 
 ---
 
@@ -11,7 +11,7 @@ _Mis à jour : 2026-04-10 (session 2)_
 - **PWA** hébergée sur GitHub Pages (`afgto79/mwps`) : dashboard par opérateur, lecture via API publique Google Sheets.
 - **Déclenchement** : script AHK compilé lancé par une tâche planifiée Windows.
 
-**Opérateurs actifs** : DP (1), CD (2), FM (7), CC (8). MP (9) supprimé.
+**Opérateurs actifs** : DP (1), CD (2), CC (8). FM (7) et PM (9) : `actif=FALSE` (ne participent pas aux challenges pour l'instant).
 
 ---
 
@@ -34,7 +34,7 @@ Google Sheets (ID: 1BsxJb2phBCdcO0GC8ErufjWDYGvY1QQevRr_xDTbnFU)
   └─ operators : id | initials | nom | color | actif  ← source de vérité pour les opérateurs
 
 PWA (GitHub Pages)
-  └─ index.html + config.js + service-worker.js (cache mwps-v3)
+  └─ index.html + config.js + service-worker.js (cache mwps-v11)
 ```
 
 ---
@@ -53,44 +53,52 @@ PWA (GitHub Pages)
 - [x] Parsers XLS et TXT Winpharma
 - [x] Agrégateur KPIs (PMHO, taux_acceptation, nb_PCA/PCR)
 - [x] Push Google Sheets avec idempotence (skip si date+opérateur déjà présent)
-- [x] Normalisation des dates Excel serial dans l'idempotence (`46121` → `2026-04-09`)
+- [x] Normalisation dates dans idempotence : serial Excel ET format français DD/MM/YYYY (`sheets_push.py`)
 - [x] Calcul flags : records perso, streaks, best_team, progression
 - [x] Calcul traj_ratio_PMHO et traj_ratio_PCA (feuille flags, colonnes Q et R)
-- [x] Suppression opérateur MP (ID 9) — warning informatif si encore dans les exports
+- [x] Normalisation dates dans flags : serial Excel ET format français DD/MM/YYYY (`sheets_flags.py`)
+- [x] `sous_cible_3j = False` si l'opérateur n'a pas travaillé aujourd'hui (congé ≠ alerte)
+- [x] Boucle multi-XLS : `scan_xls_dir` → traite tous les fichiers XLS disponibles, pas seulement J-1
+- [x] J-1 = dernier fichier disponible avant J (pas forcément la veille exacte)
+- [x] `compute_and_push_flags` appelé une seule fois après tous les pushs (lit l'historique complet)
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
 - [x] Lecture opérateurs actifs depuis feuille Sheets `operators` au démarrage (fallback operators.json)
-- [x] Fix date TXT : utilise `data_date` (date du fichier XLS J) au lieu de `target_date` (date du run) pour filtrer les entrées PCA/PCR — évite PCA=0 quand le script tourne le lendemain
+- [x] Fix date TXT : utilise `data_date` (date XLS J) pour filtrer PCA/PCR
 
-### PWA (afgto79/mwps)
+### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
-- [x] KPIs : PMHO, taux PCA, nb propositions, streak
-- [x] Barres trajectoire mensuelle glissante (traj_ratio_PMHO / traj_ratio_PCA depuis flags)
+- [x] KPIs : PMHO, taux PCA, barre propositions (nb_PCA+nb_PCR vs cible journalière)
+- [x] Barres trajectoire mensuelle glissante (traj_ratio depuis flags)
+- [x] Streak pill distingue PCA vs PMHO explicitement
+- [x] Popups gamification précisent PCA ou PMHO
 - [x] Section équipe → PMHO mensuel moyen, barres proportionnelles au leader
-- [x] Onglet historique (graphiques Chart.js 12 mois)
+- [x] Onglet historique : PMHO 365j + "Nombre de Propositions — 365 jours" (PCA+PCR)
+- [x] Alerte dates manquantes (30j) — congés non comptés (ligne existe avec ventes=0)
 - [x] Messages coaching contextuels
-- [x] Confettis sur record ou streak ≥ 7
-- [x] Popup motivation (records, streaks, best team)
-- [x] Persistence opérateur via localStorage
-- [x] Design coaching/motivation (palette warm, Nunito, animations)
-- [x] Fix parsing décimales FR (`"0,3333"` → `parseFloat` correct)
-- [x] Manifest dynamique (PWA Android préserve `?op=X` à l'installation)
-- [x] SW cache v4
-- [x] Opérateurs chargés dynamiquement depuis feuille `operators` (reset CONFIG.OPERATORS avant sync)
+- [x] Confettis + popup motivation (records, streaks, best team)
+- [x] `normalizeDate` gère serial Excel ET DD/MM/YYYY (format Sheets)
+- [x] `normalizeYearMonth` gère YYYYMM compact ET serial Excel
+- [x] `flagRow` = dernier flag ≤ todayStr (évite alertes d'un jour de congé plus récent)
+- [x] SW cache v11
+- [x] Opérateurs chargés dynamiquement depuis feuille `operators`
 
 ### Dashboard manager PC (afgto79/mwps-backend → index.html)
-- [x] Cartes par opérateur (PMHO + PCA + alertes 3j)
-- [x] Leaderboard PCA du dernier jour travaillé
-- [x] Graphiques line chart PMHO et PCA — mois courant
-- [x] Barre progression objectifs mensuels moyens
+- [x] Cartes par opérateur : PMHO + Taux PCA + barre Propositions (nb_PCA+nb_PCR vs cible/j)
+- [x] Alertes 3j (sous cible PMHO/PCA, progression, dates manquantes)
+- [x] Classement · Volume PC (nb_PCA+nb_PCR du jour)
+- [x] Tendance Volume PC — mois courant (chart line)
+- [x] Tendance PMHO — mois courant (chart line)
+- [x] Objectifs mensuels : PMHO moy. + Volume PC moy./j vs cible
 - [x] Auto-refresh 60s avec compte à rebours
-- [x] Normalisation dates Excel serial + décimales FR
+- [x] `normalizeDate` gère DD/MM/YYYY
 - [x] Opérateurs chargés dynamiquement depuis feuille `operators`
 
 ### Dashboard manager mobile (afgto79/mwps-backend → mobile/mobile.html)
-- [x] 4 onglets : KPI (cartes opérateurs), Classement PMHO mensuel, chart PMHO, chart PCA
-- [x] Cartes : PMHO + PCA + barres trajectoire + streak + alertes 3j
+- [x] 4 onglets : KPI (cartes opérateurs), Classement PMHO mensuel, chart PMHO, chart Volume PC
+- [x] Cartes : PMHO + Taux PCA + barre Propositions + barres trajectoire + streak + alertes 3j
 - [x] Leaderboard PMHO mensuel moyen, barres proportionnelles au leader
+- [x] `normalizeDate` gère DD/MM/YYYY
 - [x] Opérateurs chargés dynamiquement depuis feuille `operators`
 - [x] URL : `https://afgto79.github.io/mwps-backend/mobile/mobile.html`
 
@@ -98,15 +106,12 @@ PWA (GitHub Pages)
 
 ## Ce qui reste à faire
 
-### Beta test en cours (à partir du 09/04/2026)
+### En cours / beta test
 - [ ] Confirmer que la tâche planifiée tourne correctement chaque jour
-- [ ] Vérifier que le Sheets se remplit sans doublons sur plusieurs jours
-- [ ] Vérifier que la PWA opérateur affiche les données J+1 le matin
-- [ ] Vérifier que le dashboard manager se rafraîchit correctement sur le PC comptoir
+- [ ] Vérifier que le Sheets se remplit sans doublons sur plusieurs jours (idempotence DD/MM/YYYY corrigée)
+- [ ] Vérifier que la PWA opérateur affiche bien la dernière journée travaillée (pas la dernière date avec données)
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
-- [ ] Ajouter `"9"` à la liste `ignore` dans `operators.json` pour supprimer le WARNING MP des logs (cosmétique)
-- [x] Feuille `operators` créée dans Sheets
-- [ ] **Compléter la feuille `operators`** : vérifier que tous les opérateurs actifs y sont (1, 2, 7, 8) — sinon warning "non présent dans la feuille operators" dans les logs
+- [ ] Ajouter `"9"` à la liste `ignore` dans `operators.json` pour supprimer le WARNING PM des logs (cosmétique)
 
 ---
 
@@ -216,7 +221,6 @@ Colonnes `traj_ratio_PMHO` et `traj_ratio_PCA` calculées dans `sheets_flags.py`
 | `config/settings.json` | ID Sheets + chemin credentials |
 | `pwa/index.html` | PWA opérateur (dashboard mobile) |
 | `pwa/config.js` | SHEETS_ID, API_KEY, OPERATORS |
-| `pwa/service-worker.js` | Cache PWA (v3) |
-| `input/index.html.html` | Snapshot local du dashboard manager (référence — le vrai fichier déployé est `index.html` dans `afgto79/mwps-backend`) |
+| `pwa/service-worker.js` | Cache PWA (v11) |
 | `mobile/mobile.html` | Dashboard manager mobile (déployé dans `afgto79/mwps-backend`) |
 | `TRANSFERT/` | Package à copier sur le serveur |
