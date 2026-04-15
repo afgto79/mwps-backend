@@ -203,6 +203,10 @@ def _compute_sous_cible_3j(
     True si les 3 derniers jours travaillés (incluant aujourd'hui) sont tous sous la cible.
     Moins de 3 jours travaillés → False.
     """
+    # Alerte non pertinente si l'opérateur est absent aujourd'hui
+    if not _is_working(today_row):
+        return False
+
     if cible == 0:
         return False
 
@@ -210,8 +214,7 @@ def _compute_sous_cible_3j(
     worked_kpis: list[Optional[float]] = []
 
     # Aujourd'hui
-    if _is_working(today_row):
-        worked_kpis.append(_f(today_row.get(kpi_field)))
+    worked_kpis.append(_f(today_row.get(kpi_field)))
 
     # Passé
     past_dates = sorted(
