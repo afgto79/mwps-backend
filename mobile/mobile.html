@@ -195,6 +195,19 @@ nav button.active {
   transition: width 1s ease;
 }
 
+.pc-bar-row {
+  padding: 6px 16px 4px;
+  border-top: 1px solid var(--border);
+}
+.pc-bar-lbl {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.pc-count { font-weight: 600; color: var(--text); }
+
 .alerts-wrap {
   padding: 0 12px 8px;
   display: flex; flex-direction: column; gap: 3px;
@@ -340,7 +353,7 @@ nav button.active {
 <!-- TAB: PCA chart -->
 <div id="tab-pca" class="tab-content chart-tab">
   <div class="chart-wrap">
-    <div class="panel-title">Tendance Taux PCA — mois courant</div>
+    <div class="panel-title">Tendance Volume PC — mois courant</div>
     <div class="chart-inner"><canvas id="ch-pca"></canvas></div>
   </div>
 </div>
@@ -464,8 +477,10 @@ function renderCards(latestData, latestFlags, targets, allData) {
     const t  = targets[id] || { cible_PMHO: '15', cible_taux_PCA: '0.67' };
     const noData = !Object.keys(d).length;
 
-    const pmho = noData ? null : pf(d.PMHO);
-    const pca  = noData ? null : pf(d.taux_acceptation);
+    const pmho   = noData ? null : pf(d.PMHO);
+    const pca    = noData ? null : pf(d.taux_acceptation);
+    const pc     = noData ? null : (parseInt(d.nb_PCA) || 0) + (parseInt(d.nb_PCR) || 0);
+    const ciblePC = pf(t.cible_nb_propositions_j);
 
     const streakP = parseInt(f.streak_PCA  || 0);
     const streakM = parseInt(f.streak_PMHO || 0);
@@ -524,6 +539,11 @@ function renderCards(latestData, latestFlags, targets, allData) {
           <div class="traj-track"><div class="traj-fill" style="width:${trPcaW}%;background:${trPcaC}"></div></div>
         </div>
       </div>
+      ${pc !== null ? `
+      <div class="pc-bar-row">
+        <div class="pc-bar-lbl">Propositions <span class="pc-count">${pc}${!isNaN(ciblePC) && ciblePC > 0 ? ` / ${ciblePC}` : ''}</span></div>
+        <div class="traj-track"><div class="traj-fill" style="width:${!isNaN(ciblePC) && ciblePC > 0 ? Math.min(100, pc/ciblePC*100) : 0}%;background:${!isNaN(ciblePC) && ciblePC > 0 && pc >= ciblePC ? 'var(--green)' : 'var(--orange)'}"></div></div>
+      </div>` : ''}
       ${alertsHTML ? `<div class="alerts-wrap">${alertsHTML}</div>` : ''}
     `;
     el.appendChild(card);
@@ -639,8 +659,8 @@ function renderCharts(allData, lastDay) {
 
   chPCA = new Chart(document.getElementById('ch-pca'), {
     type: 'line',
-    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => { const v = pf(r.taux_acceptation); return !isNaN(v) ? v * 100 : null; })) },
-    options: commonOpts('%', 0, 100),
+    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => (r.nb_PCA != null || r.nb_PCR != null) ? (parseInt(r.nb_PCA) || 0) + (parseInt(r.nb_PCR) || 0) : null)) },
+    options: commonOpts(' PC', 0, null),
   });
 }
 

@@ -152,6 +152,11 @@
       font-size: 9px; font-weight: 600; color: var(--txt2); margin-top: 1px;
     }
 
+    .pc-bar-row { padding: 4px 12px 6px; border-top: 1px solid var(--border); }
+    .pc-bar-lbl { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:3px; }
+    .pc-count   { font-weight:600; color:var(--text); }
+    .pc-track   { height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+    .pc-fill    { height:100%; border-radius:3px; transition:width 1s ease; }
     .alerts-wrap {
       padding: 0 12px 8px;
       display: flex; flex-direction: column; gap: 3px;
@@ -452,6 +457,7 @@ function renderCards(latestData, latestFlags, targets, allData) {
     const noData = !Object.keys(d).length;
 
     const pmho    = noData ? null : pf(d.PMHO);
+    const pca     = noData ? null : pf(d.taux_acceptation);
     const pc      = noData ? null : (parseInt(d.nb_PCA) || 0) + (parseInt(d.nb_PCR) || 0);
     const streakP = parseInt(f.streak_PCA  || 0);
     const streakM = parseInt(f.streak_PMHO || 0);
@@ -464,7 +470,7 @@ function renderCards(latestData, latestFlags, targets, allData) {
 
     const ciblePC = pf(t.cible_nb_propositions_j);
     const cPMHO = colorClass(pmho, pf(t.cible_PMHO));
-    const cPC   = colorClass(pc,   ciblePC);
+    const cPCA  = colorClass(pca,  pf(t.cible_taux_PCA));
 
     const card = document.createElement('div');
     card.className = 'op-card' + (hasAlert ? ' alert-card' : '');
@@ -498,11 +504,16 @@ function renderCards(latestData, latestFlags, targets, allData) {
           <div class="kpi-sub">cible ${t.cible_PMHO}€</div>
         </div>
         <div class="kpi-block">
-          <div class="kpi-lbl">Vol. Propositions</div>
-          <div class="kpi-val ${cPC}">${pc ?? '—'}</div>
-          <div class="kpi-sub">cible ${isNaN(ciblePC) ? '—' : ciblePC}/j</div>
+          <div class="kpi-lbl">Taux PCA</div>
+          <div class="kpi-val ${cPCA}">${fPCA(pca)}</div>
+          <div class="kpi-sub">cible ${Math.round(pf(t.cible_taux_PCA)*100)}%</div>
         </div>
       </div>
+      ${pc !== null ? `
+      <div class="pc-bar-row">
+        <div class="pc-bar-lbl">Propositions <span class="pc-count">${pc}${!isNaN(ciblePC) && ciblePC > 0 ? ` / ${ciblePC}` : ''}</span></div>
+        <div class="pc-track"><div class="pc-fill" style="width:${!isNaN(ciblePC) && ciblePC > 0 ? Math.min(100, pc/ciblePC*100) : 0}%;background:${!isNaN(ciblePC) && ciblePC > 0 && pc >= ciblePC ? 'var(--green)' : 'var(--orange)'}"></div></div>
+      </div>` : ''}
       ${alertsHTML ? `<div class="alerts-wrap">${alertsHTML}</div>` : ''}
     `;
     el.appendChild(card);
