@@ -14,14 +14,19 @@ _EXCEL_EPOCH = date(1899, 12, 30)
 
 
 def _normalize_date(v) -> str:
-    """Convertit une date Sheets (serial Excel ou texte ISO) en ISO 'YYYY-MM-DD'."""
+    """Convertit une date Sheets (serial Excel, DD/MM/YYYY ou ISO) en ISO 'YYYY-MM-DD'."""
+    import re
+    s = str(v).strip()
+    m = re.match(r'^(\d{2})/(\d{2})/(\d{4})$', s)
+    if m:
+        return f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
     try:
-        n = int(float(str(v)))
+        n = int(float(s))
         if n > 40000:
             return (_EXCEL_EPOCH + timedelta(days=n)).isoformat()
     except (ValueError, TypeError):
         pass
-    return str(v)
+    return s
 
 logger = logging.getLogger(__name__)
 
