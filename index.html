@@ -334,7 +334,7 @@
 <!-- MIDDLE -->
 <div id="middle-row">
   <div class="lb-panel">
-    <div class="panel-title">Classement · Taux PCA</div>
+    <div class="panel-title">Classement · Volume PC</div>
     <div id="lb-content"></div>
   </div>
   <div class="charts-wrap">
@@ -343,7 +343,7 @@
       <div class="chart-inner"><canvas id="ch-pmho"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="panel-title">Tendance Taux PCA — mois courant</div>
+      <div class="panel-title">Tendance Volume PC — mois courant</div>
       <div class="chart-inner"><canvas id="ch-pca"></canvas></div>
     </div>
   </div>
@@ -512,20 +512,24 @@ function renderCards(latestData, latestFlags, targets, allData) {
 function renderLB(latestData, targets) {
   const el = document.getElementById('lb-content');
   const sorted = OP_IDS
-    .map(id => ({ id, pca: latestData[id]?.taux_acceptation != null ? pf(latestData[id].taux_acceptation) : null }))
-    .filter(o => o.pca != null)
-    .sort((a,b) => b.pca - a.pca);
+    .map(id => {
+      const d = latestData[id] || {};
+      const pc = (parseInt(d.nb_PCA) || 0) + (parseInt(d.nb_PCR) || 0);
+      return { id, pc: (d.nb_PCA != null || d.nb_PCR != null) ? pc : null };
+    })
+    .filter(o => o.pc != null)
+    .sort((a,b) => b.pc - a.pc);
 
   if (!sorted.length) { el.innerHTML = '<div class="no-data">Aucune donnée</div>'; return; }
 
-  const max = sorted[0].pca;
+  const max = sorted[0].pc;
   const rankCls = ['g1','g2','g3','',''];
 
   el.innerHTML = sorted.map((o,i) => {
     const m = OPS[o.id];
-    const t = targets[o.id] || { cible_taux_PCA: '0.67' };
-    const cls = colorClass(o.pca, pf(t.cible_taux_PCA));
-    const pct = max > 0 ? Math.round((o.pca/max)*100) : 0;
+    const t = targets[o.id] || { cible_nb_propositions_j: '5' };
+    const cls = colorClass(o.pc, pf(t.cible_nb_propositions_j));
+    const pct = max > 0 ? Math.round((o.pc/max)*100) : 0;
     return `
       <div class="lb-item">
         <div class="lb-rank ${rankCls[i]}">${i+1}</div>
@@ -533,7 +537,7 @@ function renderLB(latestData, targets) {
         <div class="lb-bars">
           <div class="lb-bar-hd">
             <span>${m.nom.split(' ')[0]}</span>
-            <span style="color:${colorHex(cls)}">${fPCA(o.pca)}</span>
+            <span style="color:${colorHex(cls)}">${o.pc} PC</span>
           </div>
           <div class="lb-track">
             <div class="lb-fill" style="width:${pct}%;background:${m.color}"></div>
@@ -608,8 +612,8 @@ function renderCharts(allData) {
 
   chPCA = new Chart(document.getElementById('ch-pca'), {
     type: 'line',
-    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => r.taux_acceptation ? pf(r.taux_acceptation)*100 : null)) },
-    options: commonOpts('%', 0, 100),
+    data: { labels, datasets: OP_IDS.map(id => mkDataset(id, r => (r.nb_PCA != null || r.nb_PCR != null) ? (parseInt(r.nb_PCA) || 0) + (parseInt(r.nb_PCR) || 0) : null)) },
+    options: commonOpts(' PC', 0, null),
   });
 }
 
@@ -626,20 +630,20 @@ function renderObjectives(allData, targets) {
     const t = targets[id] || { cible_PMHO: '15', cible_taux_PCA: '0.67' };
     const rows = allData.filter(r => r.operateur_id === id && r.date.startsWith(ym) && pf(r.nb_ventes_comptoir_j || 0) > 0);
 
-    let avgPMHO = null, avgPCA = null;
+    let avgPMHO = null, avgPC = null;
     if (rows.length) {
       const pv = rows.map(r => pf(r.PMHO)).filter(v => !isNaN(v));
-      const cv = rows.map(r => pf(r.taux_acceptation)).filter(v => !isNaN(v));
+      const cv = rows.map(r => (parseInt(r.nb_PCA) || 0) + (parseInt(r.nb_PCR) || 0));
       if (pv.length) avgPMHO = pv.reduce((a,b)=>a+b,0)/pv.length;
-      if (cv.length) avgPCA  = cv.reduce((a,b)=>a+b,0)/cv.length;
+      if (cv.length) avgPC   = Math.round(cv.reduce((a,b)=>a+b,0)/cv.length);
     }
 
     const cPMHO  = pf(t.cible_PMHO);
-    const cPCA   = pf(t.cible_taux_PCA);
+    const cPC    = pf(t.cible_nb_propositions_j);
     const pctPMHO = avgPMHO != null ? Math.min(Math.round((avgPMHO/cPMHO)*100), 100) : 0;
-    const pctPCA  = avgPCA  != null ? Math.min(Math.round((avgPCA /cPCA )*100), 100) : 0;
+    const pctPC   = avgPC   != null && cPC > 0 ? Math.min(Math.round((avgPC/cPC)*100), 100) : 0;
     const hPMHO   = colorHex(colorClass(avgPMHO, cPMHO));
-    const hPCA    = colorHex(colorClass(avgPCA,  cPCA));
+    const hPC     = colorHex(colorClass(avgPC,   cPC));
 
     const card = document.createElement('div');
     card.className = 'obj-card';
@@ -656,9 +660,9 @@ function renderObjectives(allData, targets) {
           <div class="obj-pct" style="color:${hPMHO}">${fPMHO(avgPMHO)} <span class="obj-pct-sub">(${pctPMHO}% cible)</span></div>
         </div>
         <div class="obj-kpi">
-          <div class="obj-lbl">Taux PCA moy.</div>
-          <div class="obj-track"><div class="obj-fill" style="width:${pctPCA}%;background:${hPCA}"></div></div>
-          <div class="obj-pct" style="color:${hPCA}">${fPCA(avgPCA)} <span class="obj-pct-sub">(${pctPCA}% cible)</span></div>
+          <div class="obj-lbl">Volume PC moy./j</div>
+          <div class="obj-track"><div class="obj-fill" style="width:${pctPC}%;background:${hPC}"></div></div>
+          <div class="obj-pct" style="color:${hPC}">${avgPC ?? '—'} PC <span class="obj-pct-sub">(${pctPC}% cible)</span></div>
         </div>
       </div>`;
     el.appendChild(card);
