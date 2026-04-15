@@ -436,7 +436,7 @@ function getMissingDates(allData, opId) {
     allData.filter(r => r.date >= cutStr && pf(r.nb_ventes_comptoir_j || 0) > 0).map(r => r.date)
   );
   const opDays = new Set(
-    allData.filter(r => r.operateur_id === opId && r.date >= cutStr && pf(r.nb_ventes_comptoir_j || 0) > 0).map(r => r.date)
+    allData.filter(r => r.operateur_id === opId && r.date >= cutStr).map(r => r.date)
   );
   return [...workingDays].filter(d => !opDays.has(d)).sort().reverse();
 }
