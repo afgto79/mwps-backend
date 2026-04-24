@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-04-15 (session 4)_
+_Mis à jour : 2026-04-24 (session 5)_
 
 ---
 
@@ -63,24 +63,25 @@ PWA (GitHub Pages)
 - [x] `compute_and_push_flags` appelé une seule fois après tous les pushs (lit l'historique complet)
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
+- [x] AHK v5 : `SetThreadExecutionState` anti-veille au démarrage/fin, Sleep 3000 avant popup remplacement XLS
 - [x] Lecture opérateurs actifs depuis feuille Sheets `operators` au démarrage (fallback operators.json)
 - [x] Fix date TXT : utilise `data_date` (date XLS J) pour filtrer PCA/PCR
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
-- [x] KPIs : PMHO, taux PCA, barre propositions (nb_PCA+nb_PCR vs cible journalière)
-- [x] Barres trajectoire mensuelle glissante (traj_ratio depuis flags)
+- [x] KPI gauche : PMHO + barre trajectoire mensuelle glissante
+- [x] KPI droite : **Volume PC** (nb_PCA+nb_PCR / cible_nb_propositions_j) format "X/Y" — barre + coaching
+- [x] Barre **Propositions acceptées** : taux_acceptation vs cible_taux_PCA — messages coaching aléatoires (3 cas : atteint / proche / loin)
 - [x] Streak pill distingue PCA vs PMHO explicitement
 - [x] Popups gamification précisent PCA ou PMHO
 - [x] Section équipe → PMHO mensuel moyen, barres proportionnelles au leader
 - [x] Onglet historique : PMHO 365j + "Nombre de Propositions — 365 jours" (PCA+PCR)
 - [x] Alerte dates manquantes (30j) — congés non comptés (ligne existe avec ventes=0)
-- [x] Messages coaching contextuels
 - [x] Confettis + popup motivation (records, streaks, best team)
 - [x] `normalizeDate` gère serial Excel ET DD/MM/YYYY (format Sheets)
 - [x] `normalizeYearMonth` gère YYYYMM compact ET serial Excel
 - [x] `flagRow` = dernier flag ≤ todayStr (évite alertes d'un jour de congé plus récent)
-- [x] SW cache v11
+- [x] SW cache v12
 - [x] Opérateurs chargés dynamiquement depuis feuille `operators`
 
 ### Dashboard manager PC (afgto79/mwps-backend → index.html)
