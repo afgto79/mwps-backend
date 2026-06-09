@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-09 (session 7)_
+_Mis à jour : 2026-06-09 (session 8)_
 
 ---
 
@@ -114,7 +114,20 @@ PWA (GitHub Pages)
 - [ ] Vérifier que le Sheets se remplit sans doublons sur plusieurs jours (idempotence DD/MM/YYYY corrigée)
 - [ ] Vérifier que la PWA opérateur affiche bien la dernière journée travaillée (pas la dernière date avec données)
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
-- [ ] Ajouter `"9"` à la liste `ignore` dans `operators.json` pour supprimer le WARNING PM des logs (cosmétique)
+
+### Audit robustesse — session 8 (corrections en attente de validation)
+
+**🔴 Critique**
+- [ ] **C1 — `sheets_flags.py` : déduplication DD/MM/YYYY** — `all_data` contient des doublons du jour si Sheets renvoie les dates en `DD/MM/YYYY` → faux records/streaks/alertes. Fix : normaliser la date dans le filtre `historical` (1 ligne).
+- [ ] **C2 — `main.py` : passage de mois** — quand J-1 est du mois précédent, delta ventes = négatif (XLS mois-courant vs XLS mois-précédent). PMHO et nb_ventes incorrects pour le 1er du mois. Fix : si `max(prev_dates).month != data_date.month`, forcer `xls_j1_path = None` → baseline 0 s'applique (3 lignes).
+- [ ] **C3 — `sheets_flags.py` : `annee_mois` non normalisé** — si la feuille `targets` stocke `annee_mois` au format compact (`"202606"` vs `"2026-06"`), les cibles ne sont jamais trouvées → streaks artificiellement longs, barres sans cible. Fix : normaliser `annee_mois` dans `targets_map` comme le fait déjà le JS (+5 lignes).
+
+**🟠 Importante**
+- [ ] **I1 — `sheets_flags.py` : `_traj_ratio` formula** — `avg * jours_ouvres / (cible * n)` au lieu de `avg / cible` → barres trajectoire toujours vertes les 3 premières semaines du mois quelle que soit la perf. Fix : simplifier à `round(avg / cible, 4)` (2 lignes).
+
+**🟡 Mineure**
+- [ ] **M1 — `operators.json`** : ajouter `"9"` à `ignore` (PM) → supprime le WARNING log à chaque run.
+- [ ] **M2 — `pwa/index.html` `fmtDate`** : `toISOString()` → UTC → label "Hier" potentiellement décalé entre 22h et minuit (France UTC+2). Fix : calcul en heure locale.
 
 ---
 
