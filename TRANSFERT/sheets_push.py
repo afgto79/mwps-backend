@@ -63,22 +63,39 @@ def push_data(
     # Lire les clés existantes pour ce jour (idempotence)
     # Sheets peut renvoyer la date comme serial Excel (ex: 46118) ou ISO → normalisation
     existing = read_sheet(service, spreadsheet_id, DATA_SHEET)
-    existing_keys = {
-        str(r.get('operateur_id', ''))
-        for r in existing
-        if _normalize_date(r.get('date', '')) == date_str
-    }
+
+    # existing_map : op_id -> (index_dans_liste, is_incomplete)
+    # is_incomplete = ligne existante avec PMHO ET nb_ventes vides (run précédent raté)
+    existing_map: dict[str, tuple[int, bool]] = {}
+    for i, r in enumerate(existing):
+        if _normalize_date(r.get('date', '')) == date_str:
+            op_id = str(r.get('operateur_id', ''))
+            is_incomplete = (
+                r.get('PMHO', '') == ''
+                and r.get('nb_ventes_comptoir_j', '') == ''
+            )
+            existing_map[op_id] = (i, is_incomplete)
 
     to_push = []
+    to_update: list[tuple[int, list]] = []  # (sheet_row_1based, row_data)
     skipped = 0
 
     for row in rows:
         key = str(row['operateur_id'])
-        if key in existing_keys:
-            logger.info(
-                'Données J déjà présentes pour opérateur %s, skip', row['operateur_id']
-            )
-            skipped += 1
+        if key in existing_map:
+            list_idx, is_incomplete = existing_map[key]
+            if is_incomplete:
+                sheet_row = list_idx + 2  # +1 header, +1 pour base-1
+                to_update.append((sheet_row, _row_to_list(row)))
+                logger.info(
+                    'Mise à jour op %s (PMHO vide) ligne %d',
+                    row['operateur_id'], sheet_row,
+                )
+            else:
+                logger.info(
+                    'Données J déjà présentes pour opérateur %s, skip', row['operateur_id']
+                )
+                skipped += 1
         else:
             to_push.append(_row_to_list(row))
 
@@ -91,6 +108,15 @@ def push_data(
             body={'values': to_push},
         ).execute())
 
-    pushed = len(to_push)
+    for sheet_row, row_data in to_update:
+        rng = f'{DATA_SHEET}!A{sheet_row}'
+        api_call(lambda rng=rng, data=row_data: service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=rng,
+            valueInputOption='USER_ENTERED',
+            body={'values': [data]},
+        ).execute())
+
+    pushed = len(to_push) + len(to_update)
     logger.info('Sheets data : %d ligne(s) pushée(s), %d skippée(s)', pushed, skipped)
     return pushed, skipped

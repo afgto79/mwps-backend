@@ -152,6 +152,67 @@ def compute_nb_ventes_j(data_j: dict, data_j1: dict | None) -> dict:
     return result
 
 
+def build_j1_with_fallback(
+    data_j: dict,
+    data_j1: dict | None,
+    all_xls: dict,
+    date_j: 'date',
+    ignore_list: list[str],
+) -> dict | None:
+    """
+    Complète data_j1 pour les opérateurs présents dans data_j mais absents de data_j1
+    (ex. : opérateur absent du XLS J-1 car jour non travaillé/dimanche).
+
+    Recherche en fallback le XLS le plus récent du même mois contenant l'opérateur.
+    Si aucun n'existe (première apparition du mois), utilise nb_ventes=0 / ca_ho=0
+    comme baseline cumulatif de début de mois.
+    """
+    missing = [op for op in data_j if data_j1 is None or op not in data_j1]
+    if not missing:
+        return data_j1
+
+    result = dict(data_j1) if data_j1 else {}
+
+    same_month_prior = sorted(
+        [d for d in all_xls if d < date_j and d.year == date_j.year and d.month == date_j.month],
+        reverse=True,
+    )
+
+    _cache: dict = {}
+
+    def _load_xls(d):
+        if d not in _cache:
+            try:
+                _cache[d] = parse_xls(all_xls[d], ignore_list)
+            except Exception as exc:
+                logger.warning('build_j1_with_fallback : impossible de lire XLS %s : %s', d, exc)
+                _cache[d] = {}
+        return _cache[d]
+
+    for op_id in missing:
+        fallback_vals = None
+        for d in same_month_prior:
+            fb = _load_xls(d)
+            if op_id in fb:
+                fallback_vals = fb[op_id]
+                logger.info(
+                    'Fallback J-1 op %s : XLS %s utilisé (absent du J-1 direct)',
+                    op_id, d.isoformat(),
+                )
+                break
+
+        if fallback_vals is None:
+            fallback_vals = {'nom': data_j[op_id]['nom'], 'nb_ventes': 0.0, 'ca_ho': 0.0}
+            logger.info(
+                'Op %s absent de tous les XLS du mois — baseline 0 utilisé',
+                op_id,
+            )
+
+        result[op_id] = fallback_vals
+
+    return result
+
+
 def compute_pmho(data_j: dict, data_j1: dict | None) -> dict:
     """
     Calcule le PMHO différentiel J / J-1 pour chaque opérateur.

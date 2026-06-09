@@ -18,7 +18,7 @@ import os
 import sys
 from datetime import date, datetime, timedelta
 
-from parser_xls import scan_xls_dir, find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j
+from parser_xls import scan_xls_dir, find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j, build_j1_with_fallback
 from parser_txt import find_txt_file, parse_txt
 from aggregator import aggregate
 
@@ -190,6 +190,7 @@ def main() -> int:
             except Exception as e:
                 logger.warning('Erreur lecture XLS J-1, PMHO sera null : %s', e)
 
+        xls_j1_data      = build_j1_with_fallback(xls_data, xls_j1_data, all_xls, data_date, ignore_list)
         pmho_data        = compute_pmho(xls_data, xls_j1_data)
         nb_ventes_j_data = compute_nb_ventes_j(xls_data, xls_j1_data)
 

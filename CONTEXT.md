@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-04-24 (session 5)_
+_Mis à jour : 2026-06-09 (session 7)_
 
 ---
 
@@ -66,6 +66,8 @@ PWA (GitHub Pages)
 - [x] AHK v5 : `SetThreadExecutionState` anti-veille au démarrage/fin, Sleep 3000 avant popup remplacement XLS
 - [x] Lecture opérateurs actifs depuis feuille Sheets `operators` au démarrage (fallback operators.json)
 - [x] Fix date TXT : utilise `data_date` (date XLS J) pour filtrer PCA/PCR
+- [x] `build_j1_with_fallback` (`parser_xls.py`) : si un opérateur est absent du XLS J-1 direct (ex. dimanche), cherche en fallback le XLS du même mois le plus récent le contenant. Si aucun (première apparition du mois), utilise baseline 0. Intégré dans `main.py` avant `compute_pmho` / `compute_nb_ventes_j`.
+- [x] Idempotence étendue (`sheets_push.py`) : si une ligne (date, op) existe avec PMHO **et** nb_ventes vides (run précédent raté), la ligne est **écrasée** via `values().update()` au lieu d'être skippée.
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
