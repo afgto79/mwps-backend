@@ -165,9 +165,16 @@ def main() -> int:
     for data_date in dates_to_process:
         xls_j_path = all_xls[data_date]
 
-        # J-1 = dernier fichier disponible avant data_date
+        # J-1 = dernier fichier disponible du même mois avant data_date
+        # Si J-1 est du mois précédent → None (XLS cumul mois remis à 0, baseline 0 s'applique)
         prev_dates = [d for d in all_xls if d < data_date]
-        xls_j1_path = all_xls[max(prev_dates)] if prev_dates else None
+        xls_j1_path = None
+        if prev_dates:
+            date_j1 = max(prev_dates)
+            if date_j1.year == data_date.year and date_j1.month == data_date.month:
+                xls_j1_path = all_xls[date_j1]
+            else:
+                logger.info('J-1 (%s) du mois precedent — baseline 0 pour %s', date_j1, data_date)
 
         logger.info('--- %s ---', data_date.isoformat())
         logger.info('XLS J   : %s', os.path.basename(xls_j_path))
