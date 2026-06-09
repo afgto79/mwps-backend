@@ -373,15 +373,12 @@ def compute_and_push_flags(
         obj_pca  = bool(taux_mois and cible_taux_PCA > 0
                         and (sum(taux_mois) / len(taux_mois)) >= cible_taux_PCA)
 
-        # 5b. Ratio trajectoire mensuelle glissante
-        # ratio = moyenne_cumulée / (cible_mensuelle × jours_travaillés / jours_ouvrés_totaux)
+        # 5b. Ratio trajectoire mensuelle glissante : avg / cible
+        # (ratio > 1 = au-dessus de la cible, < 1 = en dessous)
         def _traj_ratio(vals, cible, jours_ouvres):
-            if not vals or cible == 0 or jours_ouvres == 0:
+            if not vals or cible == 0:
                 return None
-            cible_traj = cible * (len(vals) / jours_ouvres)
-            if cible_traj == 0:
-                return None
-            return round((sum(vals) / len(vals)) / cible_traj, 4)
+            return round((sum(vals) / len(vals)) / cible, 4)
 
         _tr_pmho = _traj_ratio(pmho_mois, cible_PMHO,     jours_ouvres)
         _tr_pca  = _traj_ratio(taux_mois, cible_taux_PCA, jours_ouvres)
