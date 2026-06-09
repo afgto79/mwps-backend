@@ -31,6 +31,16 @@ def _normalize_date_str(v) -> str:
         pass
     return s
 
+
+def _normalize_year_month(v) -> str:
+    """Convertit YYYYMM compact (ex: '202606') en YYYY-MM ('2026-06')."""
+    import re
+    s = str(v).strip()
+    if re.match(r'^\d{6}$', s):
+        return f'{s[:4]}-{s[4:]}'
+    return s
+
+
 logger = logging.getLogger(__name__)
 
 FLAGS_SHEET   = 'flags'
@@ -284,7 +294,7 @@ def compute_and_push_flags(
     targets_raw = read_sheet(service, spreadsheet_id, TARGETS_SHEET)
     targets_map: dict[tuple, dict] = {}
     for t in targets_raw:
-        key = (t.get('annee_mois', ''), str(t.get('operateur_id', '')))
+        key = (_normalize_year_month(t.get('annee_mois', '')), str(t.get('operateur_id', '')))
         targets_map[key] = {
             'cible_PMHO':              _f(t.get('cible_PMHO'))                     or 0.0,
             'cible_taux_PCA':          _f(t.get('cible_taux_PCA'))                 or 0.0,
