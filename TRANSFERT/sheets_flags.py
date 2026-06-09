@@ -271,7 +271,7 @@ def compute_and_push_flags(
     today_ids = {str(r['operateur_id']) for r in today_rows}
     historical = [
         r for r in sheets_data
-        if not (r.get('date') == date_str and r.get('operateur_id') in today_ids)
+        if not (_normalize_date_str(r.get('date', '')) == date_str and str(r.get('operateur_id', '')) in today_ids)
     ]
     today_normalized = [_normalize_row(r) for r in today_rows]
     all_data = historical + today_normalized
