@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-09 (session 8)_
+_Mis à jour : 2026-06-09 (session 9)_
 
 ---
 
@@ -115,19 +115,19 @@ PWA (GitHub Pages)
 - [ ] Vérifier que la PWA opérateur affiche bien la dernière journée travaillée (pas la dernière date avec données)
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
 
-### Audit robustesse — session 8 (corrections en attente de validation)
+### Audit robustesse — session 8-9 ✅ CORRIGÉ
 
-**🔴 Critique**
-- [ ] **C1 — `sheets_flags.py` : déduplication DD/MM/YYYY** — `all_data` contient des doublons du jour si Sheets renvoie les dates en `DD/MM/YYYY` → faux records/streaks/alertes. Fix : normaliser la date dans le filtre `historical` (1 ligne).
-- [ ] **C2 — `main.py` : passage de mois** — quand J-1 est du mois précédent, delta ventes = négatif (XLS mois-courant vs XLS mois-précédent). PMHO et nb_ventes incorrects pour le 1er du mois. Fix : si `max(prev_dates).month != data_date.month`, forcer `xls_j1_path = None` → baseline 0 s'applique (3 lignes).
-- [ ] **C3 — `sheets_flags.py` : `annee_mois` non normalisé** — si la feuille `targets` stocke `annee_mois` au format compact (`"202606"` vs `"2026-06"`), les cibles ne sont jamais trouvées → streaks artificiellement longs, barres sans cible. Fix : normaliser `annee_mois` dans `targets_map` comme le fait déjà le JS (+5 lignes).
+**🔴 Critique — corrigés**
+- [x] **C1 — `sheets_flags.py`** : déduplication DD/MM/YYYY — `_normalize_date_str()` dans le filtre `historical` (commit a28a59b)
+- [x] **C2 — `main.py`** : passage de mois — J-1 du mois précédent → `xls_j1_path = None` → baseline 0 (commit 08a10dc)
+- [x] **C3 — `sheets_flags.py`** : `annee_mois` normalisé YYYYMM→YYYY-MM via `_normalize_year_month()` (commit 6bd7f4b)
 
-**🟠 Importante**
-- [ ] **I1 — `sheets_flags.py` : `_traj_ratio` formula** — `avg * jours_ouvres / (cible * n)` au lieu de `avg / cible` → barres trajectoire toujours vertes les 3 premières semaines du mois quelle que soit la perf. Fix : simplifier à `round(avg / cible, 4)` (2 lignes).
+**🟠 Importante — corrigée**
+- [x] **I1 — `sheets_flags.py`** : `_traj_ratio = avg / cible` (commit be6d6cc)
 
-**🟡 Mineure**
-- [ ] **M1 — `operators.json`** : ajouter `"9"` à `ignore` (PM) → supprime le WARNING log à chaque run.
-- [ ] **M2 — `pwa/index.html` `fmtDate`** : `toISOString()` → UTC → label "Hier" potentiellement décalé entre 22h et minuit (France UTC+2). Fix : calcul en heure locale.
+**🟡 Mineures — corrigées**
+- [x] **M1 — `operators.json`** : `"9"` ajouté à `ignore`
+- [x] **M2 — `pwa/index.html`** : `fmtDate` utilise l'heure locale (plus UTC)
 
 ---
 
