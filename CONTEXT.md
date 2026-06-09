@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-09 (session 9)_
+_Mis à jour : 2026-06-09 (session 9 — audit robustesse complet)_
 
 ---
 
@@ -68,6 +68,11 @@ PWA (GitHub Pages)
 - [x] Fix date TXT : utilise `data_date` (date XLS J) pour filtrer PCA/PCR
 - [x] `build_j1_with_fallback` (`parser_xls.py`) : si un opérateur est absent du XLS J-1 direct (ex. dimanche), cherche en fallback le XLS du même mois le plus récent le contenant. Si aucun (première apparition du mois), utilise baseline 0. Intégré dans `main.py` avant `compute_pmho` / `compute_nb_ventes_j`.
 - [x] Idempotence étendue (`sheets_push.py`) : si une ligne (date, op) existe avec PMHO **et** nb_ventes vides (run précédent raté), la ligne est **écrasée** via `values().update()` au lieu d'être skippée.
+- [x] Passage de mois (`main.py`) : si J-1 est du mois précédent → `xls_j1_path = None` → baseline 0 — évite delta négatif le 1er de chaque mois.
+- [x] Déduplication `all_data` (`sheets_flags.py`) : `_normalize_date_str()` dans le filtre `historical` — exclut correctement les lignes du jour même en DD/MM/YYYY.
+- [x] `annee_mois` normalisé (`sheets_flags.py`) : `_normalize_year_month()` dans `targets_map` — gère YYYYMM compact et YYYY-MM.
+- [x] `_traj_ratio` corrigé (`sheets_flags.py`) : `avg / cible` au lieu de `avg * jo / (cible * n)` — barres trajectoire reflètent la performance réelle dès le jour 1.
+- [x] `operators.json` : `"9"` ajouté à `ignore` — supprime le WARNING PM à chaque run.
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
@@ -85,6 +90,7 @@ PWA (GitHub Pages)
 - [x] `flagRow` = dernier flag ≤ todayStr (évite alertes d'un jour de congé plus récent)
 - [x] SW cache v12
 - [x] Opérateurs chargés dynamiquement depuis feuille `operators`
+- [x] `fmtDate` heure locale (plus UTC) — label "Hier" correct entre 22h et minuit.
 
 ### Dashboard manager PC (afgto79/mwps-backend → index.html)
 - [x] Cartes par opérateur : PMHO + Taux PCA + barre Propositions (nb_PCA+nb_PCR vs cible/j)
@@ -111,23 +117,9 @@ PWA (GitHub Pages)
 
 ### En cours / beta test
 - [ ] Confirmer que la tâche planifiée tourne correctement chaque jour
-- [ ] Vérifier que le Sheets se remplit sans doublons sur plusieurs jours (idempotence DD/MM/YYYY corrigée)
+- [ ] Déployer les fichiers TRANSFERT/ sur le serveur (sessions 6-9 : main.py, parser_xls.py, sheets_push.py, sheets_flags.py, config/operators.json)
 - [ ] Vérifier que la PWA opérateur affiche bien la dernière journée travaillée (pas la dernière date avec données)
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
-
-### Audit robustesse — session 8-9 ✅ CORRIGÉ
-
-**🔴 Critique — corrigés**
-- [x] **C1 — `sheets_flags.py`** : déduplication DD/MM/YYYY — `_normalize_date_str()` dans le filtre `historical` (commit a28a59b)
-- [x] **C2 — `main.py`** : passage de mois — J-1 du mois précédent → `xls_j1_path = None` → baseline 0 (commit 08a10dc)
-- [x] **C3 — `sheets_flags.py`** : `annee_mois` normalisé YYYYMM→YYYY-MM via `_normalize_year_month()` (commit 6bd7f4b)
-
-**🟠 Importante — corrigée**
-- [x] **I1 — `sheets_flags.py`** : `_traj_ratio = avg / cible` (commit be6d6cc)
-
-**🟡 Mineures — corrigées**
-- [x] **M1 — `operators.json`** : `"9"` ajouté à `ignore`
-- [x] **M2 — `pwa/index.html`** : `fmtDate` utilise l'heure locale (plus UTC)
 
 ---
 
