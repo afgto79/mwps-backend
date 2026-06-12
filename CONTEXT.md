@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-09 (session 9 — audit robustesse complet)_
+_Mis à jour : 2026-06-12 (session 10 — bugs opérationnels, récupération données manquantes)_
 
 ---
 
@@ -72,7 +72,7 @@ PWA (GitHub Pages)
 - [x] Déduplication `all_data` (`sheets_flags.py`) : `_normalize_date_str()` dans le filtre `historical` — exclut correctement les lignes du jour même en DD/MM/YYYY.
 - [x] `annee_mois` normalisé (`sheets_flags.py`) : `_normalize_year_month()` dans `targets_map` — gère YYYYMM compact et YYYY-MM.
 - [x] `_traj_ratio` corrigé (`sheets_flags.py`) : `avg / cible` au lieu de `avg * jo / (cible * n)` — barres trajectoire reflètent la performance réelle dès le jour 1.
-- [x] `operators.json` : `"9"` ajouté à `ignore` — supprime le WARNING PM à chaque run.
+- [x] `operators.json` : `"9 MARCAGGI PAULE"` dans `ignore` — doit correspondre à la chaîne exacte du XLS (ID + nom), pas juste l'ID.
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
@@ -116,10 +116,38 @@ PWA (GitHub Pages)
 ## Ce qui reste à faire
 
 ### En cours / beta test
-- [ ] Confirmer que la tâche planifiée tourne correctement chaque jour
-- [ ] Déployer les fichiers TRANSFERT/ sur le serveur (sessions 6-9 : main.py, parser_xls.py, sheets_push.py, sheets_flags.py, config/operators.json)
+- [ ] **DÉPLOYER** les fichiers TRANSFERT/ sur le serveur (sessions 6-10 : main.py, parser_xls.py, sheets_push.py, sheets_flags.py, config/operators.json)
+- [ ] Vérifier que la tâche planifiée tourne correctement chaque jour après déploiement
+- [ ] Décider opérateur 4 "AMEZQUITA" (ID=4) : ignorer ou activer dans feuille `operators`
 - [ ] Vérifier que la PWA opérateur affiche bien la dernière journée travaillée (pas la dernière date avec données)
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
+
+### Robustesse — Points de vigilance identifiés (session 10)
+
+#### AHK — échec silencieux le 11/06/2026
+L'AHK a échoué ("Excel non ouvert après 20s — abandon") → aucun export XLS/TXT pour le 10/06.
+- **Symptôme** : données manquantes en Sheets, PMHO=None
+- **Procédure de récupération manuelle** :
+  1. Exporter manuellement XLS et TXT depuis Winpharma
+  2. Copier les fichiers dans `TRANSFERT/input/` sur le serveur (ou la machine dev)
+  3. Lancer `python main.py --date YYYYMMDD` (date = demain par rapport aux XLS)
+  4. Le script détecte automatiquement tous les XLS non encore poussés
+- **À faire** : notification manager en cas d'échec AHK (Phase 5 — alerte)
+
+#### find_txt_file — sélection par mtime (piège)
+`find_txt_file` choisit le TXT le plus récemment **modifié** (pas la date dans le nom).
+- **Risque** : exporter manuellement un TXT pour une date antérieure le rend "plus récent" → le script l'utilise pour toutes les dates, y compris les jours suivants → nb_PCA/PCR faux
+- **Règle** : ne jamais laisser dans `input/` un TXT dont la date (dans le nom) est antérieure au TXT le plus récent. Supprimer l'ancien après vérification.
+
+#### operators.json — ignore list (chaîne exacte XLS requise)
+Le champ `ignore` doit contenir la chaîne **exacte** telle qu'elle apparaît dans le XLS (`"9 MARCAGGI PAULE"`, pas `"9"`).
+Format XLS : `"{ID} {NOM COMPLET}"` (ex : `"4 AMEZQUITA"`, `"9 MARCAGGI PAULE"`).
+
+#### Opérateurs inconnus dans XLS
+Si un opérateur est dans le XLS mais absent de la feuille `operators` Sheets et de la liste `ignore` :
+- Ses données sont poussées dans `data` → elles n'apparaissent pas dans les dashboards
+- Un WARNING "Nouvel opérateur détecté" est loggé à chaque run
+- Résoudre en ajoutant l'opérateur dans la feuille `operators` (actif=TRUE) ou dans `ignore`
 
 ---
 
