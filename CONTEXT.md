@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-12 (session 10 — bugs opérationnels, récupération données manquantes)_
+_Mis à jour : 2026-06-13 (session 11 — watchdog fallback AHK)_
 
 ---
 
@@ -63,6 +63,7 @@ PWA (GitHub Pages)
 - [x] `compute_and_push_flags` appelé une seule fois après tous les pushs (lit l'historique complet)
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
+- [x] `watchdog.py` : fallback à 01h00 — screenshot avant relance AHK, relance auto, screenshot après si échec, email dans tous les cas (succès ou échec). Capture via PowerShell natif (pas de dépendance externe). Gmail app password stocké dans le script.
 - [x] AHK v5 : `SetThreadExecutionState` anti-veille au démarrage/fin, Sleep 3000 avant popup remplacement XLS
 - [x] Lecture opérateurs actifs depuis feuille Sheets `operators` au démarrage (fallback operators.json)
 - [x] Fix date TXT : utilise `data_date` (date XLS J) pour filtrer PCA/PCR
@@ -117,12 +118,18 @@ PWA (GitHub Pages)
 
 ### En cours / beta test
 - [ ] **DÉPLOYER** les fichiers TRANSFERT/ sur le serveur (sessions 6-10 : main.py, parser_xls.py, sheets_push.py, sheets_flags.py, config/operators.json)
+- [ ] **DÉPLOYER** `watchdog.py` sur le serveur + créer tâche planifiée Windows à 01h00
 - [ ] Vérifier que la tâche planifiée tourne correctement chaque jour après déploiement
 - [ ] Décider opérateur 4 "AMEZQUITA" (ID=4) : ignorer ou activer dans feuille `operators`
 - [ ] Vérifier que la PWA opérateur affiche bien la dernière journée travaillée (pas la dernière date avec données)
 - [ ] Tester l'installation PWA Android avec `?op=X` → vérifier que start_url est correct
 
 ### Robustesse — Points de vigilance identifiés (session 10)
+
+#### AHK — échecs récurrents à 00h05 (pattern identifié)
+Winpharma bloqué sur MAJ ou alerte sanitaire → AHK abandonne après 20s timeout.
+Observé régulièrement depuis avril 2026 (04-17, 04-22, 04-25, 04-26, 04-29, 05-01, 05-08, 05-11, 05-13, 05-19, 05-28, 06-04, 06-11, 06-13).
+**Solution déployée (session 11)** : `watchdog.py` à 01h00 — relance automatique + email + screenshots.
 
 #### AHK — échec silencieux le 11/06/2026
 L'AHK a échoué ("Excel non ouvert après 20s — abandon") → aucun export XLS/TXT pour le 10/06.
@@ -259,4 +266,5 @@ Colonnes `traj_ratio_PMHO` et `traj_ratio_PCA` calculées dans `sheets_flags.py`
 | `pwa/config.js` | SHEETS_ID, API_KEY, OPERATORS |
 | `pwa/service-worker.js` | Cache PWA (v11) |
 | `mobile/mobile.html` | Dashboard manager mobile (déployé dans `afgto79/mwps-backend`) |
+| `watchdog.py` | Fallback AHK : relance auto à 01h00 + email + screenshots |
 | `TRANSFERT/` | Package à copier sur le serveur |
