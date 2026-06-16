@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-13 (session 11 — watchdog fallback AHK)_
+_Mis à jour : 2026-06-16 (session 12 — rattrapage 61 dates, quota 429, opérateurs occasionnels)_
 
 ---
 
@@ -146,6 +146,13 @@ L'AHK a échoué ("Excel non ouvert après 20s — abandon") → aucun export XL
 - **Risque** : exporter manuellement un TXT pour une date antérieure le rend "plus récent" → le script l'utilise pour toutes les dates, y compris les jours suivants → nb_PCA/PCR faux
 - **Règle** : ne jamais laisser dans `input/` un TXT dont la date (dans le nom) est antérieure au TXT le plus récent. Supprimer l'ancien après vérification.
 
+#### Quota Google Sheets 429 lors de runs de rattrapage (session 12 — 16/06/2026)
+Run 61 dates d'un coup (rattrapage) → ~61 lectures Sheets en ~1 min → quota dépassé (limite : 60 reads/min/user).
+- **Symptôme** : `HttpError 429 RATE_LIMIT_EXCEEDED` sur les dernières dates traitées — push échoué pour 06-13, 06-14, 06-15
+- **Résolution** : relancer `main.py` à quota reposé → les dates déjà présentes sont skippées, seules les manquantes sont poussées. 06-15 a été récupérée au run 08:46 (4 lignes pushées).
+- **Cause structurelle** : le skip-check lit la feuille Sheets 1 fois par date × opérateur → ~4 reads/date × 61 dates = trop.
+- **Amélioration possible** : charger tout `data` en mémoire 1 seule fois au démarrage → 0 lecture pendant le traitement des dates.
+
 #### operators.json — ignore list (chaîne exacte XLS requise)
 Le champ `ignore` doit contenir la chaîne **exacte** telle qu'elle apparaît dans le XLS (`"9 MARCAGGI PAULE"`, pas `"9"`).
 Format XLS : `"{ID} {NOM COMPLET}"` (ex : `"4 AMEZQUITA"`, `"9 MARCAGGI PAULE"`).
@@ -155,6 +162,8 @@ Si un opérateur est dans le XLS mais absent de la feuille `operators` Sheets et
 - Ses données sont poussées dans `data` → elles n'apparaissent pas dans les dashboards
 - Un WARNING "Nouvel opérateur détecté" est loggé à chaque run
 - Résoudre en ajoutant l'opérateur dans la feuille `operators` (actif=TRUE) ou dans `ignore`
+
+**Opérateurs occasionnels connus (session 12)** : AMEZQUITA (4) et MAGALHAES (7) sont des opérateurs occasionnels. Leurs données sont précieuses mais ne doivent **pas** figurer dans les dashboards. Le WARNING répété est donc attendu — ce n'est pas un bug. Piste d'amélioration : ajouter une liste `occasional_operators` dans la config pour passer le log en INFO.
 
 ---
 
