@@ -194,7 +194,7 @@ def main() -> int:
     logger.info('Sortie écrite : %s', os.path.relpath(csv_path, BASE_DIR))
 
     # --- Google Sheets (Phase 3) ---
-    pushed, skipped, flags_ok = 0, 0, False
+    pushed, skipped, flags_ok, sheets_error = 0, 0, False, False
     try:
         from sheets_client import get_service, load_settings
         from sheets_push import push_data
@@ -216,19 +216,21 @@ def main() -> int:
         except Exception as fe:
             logger.error('Sheets flags échoué : %s', fe)
     except Exception as e:
+        sheets_error = True
         logger.error(
             'Sheets inaccessible, données disponibles localement dans output/ : %s', e
         )
 
     logger.info('Run terminé — %d opérateurs traités', len(rows))
 
-    # --- Rapport email ---
-    try:
-        from mailer import send_run_report
-        log_path = os.path.join(LOGS_DIR, f'mwps_{target_date.strftime("%Y%m%d")}.log')
-        send_run_report(target_date, log_path, pushed, skipped, flags_ok)
-    except Exception as e:
-        logger.warning('Rapport email non envoyé : %s', e)
+    # --- Alerte email (uniquement en cas de problème) ---
+    if sheets_error or not flags_ok:
+        try:
+            from mailer import send_alert
+            log_path = os.path.join(LOGS_DIR, f'mwps_{target_date.strftime("%Y%m%d")}.log')
+            send_alert(target_date, log_path, pushed, skipped, flags_ok, sheets_error)
+        except Exception as e:
+            logger.warning('Alerte email non envoyée : %s', e)
 
     return 0
 

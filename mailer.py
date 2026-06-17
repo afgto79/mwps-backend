@@ -75,21 +75,18 @@ def take_screenshot() -> str | None:
         return None
 
 
-def send_run_report(
+def send_alert(
     target_date: date,
     log_path: str,
     pushed: int,
     skipped: int,
     flags_ok: bool,
+    sheets_error: bool = False,
 ) -> None:
     """
-    Envoie le rapport de fin de run.
+    Envoie une alerte email en cas de problème Sheets.
 
-    target_date : date cible du run
-    log_path    : chemin vers le fichier log du run (inclus dans le corps)
-    pushed      : lignes poussées dans Sheets
-    skipped     : lignes skippées (déjà présentes)
-    flags_ok    : True si compute_and_push_flags a réussi
+    Appelé uniquement si sheets_error=True ou flags_ok=False.
     """
     _setup_mail_log()
 
@@ -103,14 +100,20 @@ def send_run_report(
         log_content = f'(log illisible : {e})'
 
     date_str = target_date.strftime('%d/%m/%Y')
-    status   = 'OK' if flags_ok else 'PARTIEL — flags échoués'
-    subject  = f'MWPS — Run {date_str} — {status}'
+
+    if sheets_error:
+        problem = 'Sheets inaccessible — données non uploadées'
+    else:
+        problem = 'Flags non calculés (quota 429 ou erreur API)'
+
+    subject = f'MWPS — ALERTE {date_str} — {problem}'
 
     body = (
-        f'Run MWPS du {date_str}\n'
-        f'Statut  : {status}\n'
-        f'Sheets  : {pushed} ligne(s) pushée(s), {skipped} skippée(s)\n'
-        f'Flags   : {"OK" if flags_ok else "ECHEC (429 ou autre erreur)"}\n'
+        f'Problème détecté lors du run MWPS du {date_str}\n\n'
+        f'Problème : {problem}\n'
+        f'Sheets   : {pushed} ligne(s) uploadée(s), {skipped} skippée(s)\n'
+        f'Flags    : {"OK" if flags_ok else "ECHEC"}\n\n'
+        f'Action requise : vérifier le log ci-dessous et relancer si nécessaire.\n'
         f'\n{"=" * 60}\n'
         f'LOG COMPLET\n'
         f'{"=" * 60}\n\n'
@@ -138,12 +141,12 @@ def send_run_report(
             srv.login(SMTP_USER, SMTP_PASS)
             srv.sendmail(SMTP_USER, MAIL_TO, msg.as_string())
 
-        _mail_log.info('[OK]    Run %s — %d pushée(s) — flags=%s', date_str, pushed, 'OK' if flags_ok else 'ECHEC')
-        logger.info('Rapport email envoyé (%s)', date_str)
+        _mail_log.info('[OK]    Alerte %s — %s — flags=%s', date_str, problem, 'OK' if flags_ok else 'ECHEC')
+        logger.info('Alerte email envoyée (%s)', date_str)
 
     except Exception as e:
-        _mail_log.error('[ECHEC] Run %s — %s', date_str, e)
-        logger.warning('Rapport email échoué : %s', e)
+        _mail_log.error('[ECHEC] Alerte %s — %s', date_str, e)
+        logger.warning('Alerte email échouée : %s', e)
 
 
 # ── Test autonome ────────────────────────────────────────────────────────────
@@ -155,12 +158,13 @@ if __name__ == '__main__':
         datefmt='%H:%M:%S',
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    print('Test envoi mail MWPS...')
-    send_run_report(
+    print('Test alerte email MWPS (simulation flags échoués)...')
+    send_alert(
         target_date=date.today(),
         log_path=os.path.join(LOGS_DIR, f'mwps_{date.today().strftime("%Y%m%d")}.log'),
         pushed=4,
         skipped=0,
-        flags_ok=True,
+        flags_ok=False,
+        sheets_error=False,
     )
     print('Terminé — vérifier mail.log et la boîte Gmail.')
