@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import date, datetime, timedelta
 
 from parser_xls import find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j, _extract_date_from_filename
@@ -193,6 +194,7 @@ def main() -> int:
     logger.info('Sortie écrite : %s', os.path.relpath(csv_path, BASE_DIR))
 
     # --- Google Sheets (Phase 3) ---
+    pushed, skipped, flags_ok = 0, 0, False
     try:
         from sheets_client import get_service, load_settings
         from sheets_push import push_data
@@ -203,17 +205,31 @@ def main() -> int:
         service        = get_service()
 
         pushed, skipped = push_data(rows, target_date, spreadsheet_id, service)
-        compute_and_push_flags(target_date, rows, spreadsheet_id, service)
-        logger.info(
-            'Sheets : %d ligne(s) pushée(s), %d skippée(s), flags calculés pour %d opérateurs',
-            pushed, skipped, len(rows),
-        )
+        time.sleep(30)
+        try:
+            compute_and_push_flags(target_date, rows, spreadsheet_id, service)
+            flags_ok = True
+            logger.info(
+                'Sheets : %d ligne(s) pushée(s), %d skippée(s), flags calculés pour %d opérateurs',
+                pushed, skipped, len(rows),
+            )
+        except Exception as fe:
+            logger.error('Sheets flags échoué : %s', fe)
     except Exception as e:
         logger.error(
             'Sheets inaccessible, données disponibles localement dans output/ : %s', e
         )
 
     logger.info('Run terminé — %d opérateurs traités', len(rows))
+
+    # --- Rapport email ---
+    try:
+        from mailer import send_run_report
+        log_path = os.path.join(LOGS_DIR, f'mwps_{target_date.strftime("%Y%m%d")}.log')
+        send_run_report(target_date, log_path, pushed, skipped, flags_ok)
+    except Exception as e:
+        logger.warning('Rapport email non envoyé : %s', e)
+
     return 0
 
 

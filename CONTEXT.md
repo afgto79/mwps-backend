@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-16 (session 12 — rattrapage 61 dates, quota 429, opérateurs occasionnels)_
+_Mis à jour : 2026-06-17 (session 13 — mailer.py rapport email post-run, fix 429 backoff+délai)_
 
 ---
 
@@ -64,6 +64,8 @@ PWA (GitHub Pages)
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
 - [x] `watchdog.py` : fallback à 01h00 — screenshot avant relance AHK, relance auto, screenshot après si échec, email dans tous les cas (succès ou échec). Capture via PowerShell natif (pas de dépendance externe). Gmail app password stocké dans le script.
+- [x] `mailer.py` : rapport email automatique après chaque run `main.py` — screenshot + log complet dans le corps, log succès/échec dans `logs/mail.log`. Sujet : `MWPS — Run JJ/MM/YYYY — OK / PARTIEL`. Testé et fonctionnel (session 13).
+- [x] Fix quota 429 Sheets (session 13) : backoff retry `5s → 15s` (`sheets_client.py`), délai `30s` entre `push_data` et `compute_and_push_flags` (`main.py`). Isolement exception flags pour tracker `flags_ok` séparément.
 - [x] AHK v5 : `SetThreadExecutionState` anti-veille au démarrage/fin, Sleep 3000 avant popup remplacement XLS
 - [x] Lecture opérateurs actifs depuis feuille Sheets `operators` au démarrage (fallback operators.json)
 - [x] Fix date TXT : utilise `data_date` (date XLS J) pour filtrer PCA/PCR
@@ -152,6 +154,11 @@ Run 61 dates d'un coup (rattrapage) → ~61 lectures Sheets en ~1 min → quota 
 - **Résolution** : relancer `main.py` à quota reposé → les dates déjà présentes sont skippées, seules les manquantes sont poussées. 06-15 a été récupérée au run 08:46 (4 lignes pushées).
 - **Cause structurelle** : le skip-check lit la feuille Sheets 1 fois par date × opérateur → ~4 reads/date × 61 dates = trop.
 - **Amélioration possible** : charger tout `data` en mémoire 1 seule fois au démarrage → 0 lecture pendant le traitement des dates.
+
+#### Quota 429 sur flags après push data (session 13 — 17/06/2026)
+Run quotidien normal (1 date) mais push data consomme 2 retries (429) → quota encore saturé quand les flags démarrent immédiatement → flags échoués.
+- **Fix déployé** : backoff retry `5s → 15s` dans `api_call` (`sheets_client.py`) + délai fixe `30s` entre push_data et compute_and_push_flags (`main.py`).
+- **Diagnostic** : rapport email `mailer.py` indique maintenant le statut flags OK/ECHEC à chaque run.
 
 #### operators.json — ignore list (chaîne exacte XLS requise)
 Le champ `ignore` doit contenir la chaîne **exacte** telle qu'elle apparaît dans le XLS (`"9 MARCAGGI PAULE"`, pas `"9"`).
@@ -276,4 +283,5 @@ Colonnes `traj_ratio_PMHO` et `traj_ratio_PCA` calculées dans `sheets_flags.py`
 | `pwa/service-worker.js` | Cache PWA (v11) |
 | `mobile/mobile.html` | Dashboard manager mobile (déployé dans `afgto79/mwps-backend`) |
 | `watchdog.py` | Fallback AHK : relance auto à 01h00 + email + screenshots |
+| `mailer.py` | Rapport email post-run : screenshot + log + statut flags → logs/mail.log |
 | `TRANSFERT/` | Package à copier sur le serveur |
