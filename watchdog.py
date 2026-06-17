@@ -35,7 +35,7 @@ SMTP_HOST  = "smtp.gmail.com"
 SMTP_PORT  = 587
 SMTP_USER  = "pharmacie.depremont@gmail.com"
 SMTP_PASS  = "ydwxwonvprwdezsj"   # ← Mot de passe d'application Gmail (MailPMHO)
-MAIL_TO    = "af_depremont@gmail.com"
+MAIL_TO    = "pharmacie.depremont@gmail.com"
 
 AHK_TIMEOUT = 300   # secondes max d'attente fin AHK
 

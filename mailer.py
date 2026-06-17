@@ -26,7 +26,7 @@ SMTP_HOST = 'smtp.gmail.com'
 SMTP_PORT = 587
 SMTP_USER = 'pharmacie.depremont@gmail.com'
 SMTP_PASS = 'ydwxwonvprwdezsj'
-MAIL_TO   = 'af_depremont@gmail.com'
+MAIL_TO   = 'pharmacie.depremont@gmail.com'
 
 logger = logging.getLogger(__name__)
 
