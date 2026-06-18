@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-17 (session 13 — mailer.py rapport email post-run, fix 429 backoff+délai)_
+_Mis à jour : 2026-06-18 (session 14 — PWA : bloc "Volume PC moyen · Mois en cours")_
 
 ---
 
@@ -94,6 +94,7 @@ PWA (GitHub Pages)
 - [x] SW cache v12
 - [x] Opérateurs chargés dynamiquement depuis feuille `operators`
 - [x] `fmtDate` heure locale (plus UTC) — label "Hier" correct entre 22h et minuit.
+- [x] Bloc **Volume PC moyen · Mois en cours** (session 14) : classement équipe mensuel PCA+PCR. Valeur = `(PCA+PCR cumulés) / jours_travaillés` (1 décimale, `/j`). Barre = `cumul / cible_mensuelle` (`cible_nb_propositions_j × jours_ouvres_mois` depuis `targets`). Couleur = taux `PCA/(PCA+PCR)` vs `cible_taux_PCA` (mêmes seuils que `gaugeColor`). Tri desc par remplissage de barre. Guard si colonnes absentes.
 
 ### Dashboard manager PC (afgto79/mwps-backend → index.html)
 - [x] Cartes par opérateur : PMHO + Taux PCA + barre Propositions (nb_PCA+nb_PCR vs cible/j)
