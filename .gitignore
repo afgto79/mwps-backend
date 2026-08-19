@@ -29,3 +29,7 @@ pwa/
 # OS
 .DS_Store
 Thumbs.db
+
+# TRANSFERT credentials (cle privee Google/GCP)
+TRANSFERT/config/credentials.json
+TRANSFERT/config/settings.json
