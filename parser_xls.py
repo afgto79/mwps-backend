@@ -38,29 +38,41 @@ def _extract_date_from_filename(filename: str) -> date | None:
         return None
 
 
+def scan_xls_dir(input_dir: str) -> dict:
+    """
+    Scanne input_dir et retourne {date: chemin} pour tous les fichiers XLS trouvés.
+    Utilisé par find_xls_files et par la boucle multi-dates de main.py.
+    """
+    files = {}
+    for fname in os.listdir(input_dir):
+        if not fname.lower().endswith('.xls'):
+            continue
+        fdate = _extract_date_from_filename(fname)
+        if fdate is not None:
+            files[fdate] = os.path.join(input_dir, fname)
+    return files
+
+
 def find_xls_files(input_dir: str, target_date: date) -> tuple[str | None, str | None]:
     """
     Cherche les fichiers XLS J et J-1 dans input_dir.
 
     target_date = date du run (aujourd'hui).
-    XLS J   = export "au {target_date - 1 jour}"
-    XLS J-1 = export "au {target_date - 2 jours}"
+    XLS J   = export "au {target_date - 1 jour}" (match exact)
+    XLS J-1 = dernier fichier disponible avec date < date_j
+              (gère weekends et jours fériés : pas de -2 jours fixe)
 
     Retourne (path_j, path_j1) — None si absent.
     """
-    date_j  = target_date - timedelta(days=1)
-    date_j1 = target_date - timedelta(days=2)
+    all_xls = scan_xls_dir(input_dir)
 
-    xls_j = xls_j1 = None
+    date_j = target_date - timedelta(days=1)
+    xls_j  = all_xls.get(date_j)
+    if xls_j is None:
+        return None, None
 
-    for fname in os.listdir(input_dir):
-        if not fname.lower().endswith('.xls'):
-            continue
-        fdate = _extract_date_from_filename(fname)
-        if fdate == date_j:
-            xls_j = os.path.join(input_dir, fname)
-        elif fdate == date_j1:
-            xls_j1 = os.path.join(input_dir, fname)
+    prev_dates = [d for d in all_xls if d < date_j]
+    xls_j1 = all_xls[max(prev_dates)] if prev_dates else None
 
     return xls_j, xls_j1
 
@@ -136,6 +148,67 @@ def compute_nb_ventes_j(data_j: dict, data_j1: dict | None) -> dict:
             result[op_id] = 0
         else:
             result[op_id] = delta
+
+    return result
+
+
+def build_j1_with_fallback(
+    data_j: dict,
+    data_j1: dict | None,
+    all_xls: dict,
+    date_j: 'date',
+    ignore_list: list[str],
+) -> dict | None:
+    """
+    Complète data_j1 pour les opérateurs présents dans data_j mais absents de data_j1
+    (ex. : opérateur absent du XLS J-1 car jour non travaillé/dimanche).
+
+    Recherche en fallback le XLS le plus récent du même mois contenant l'opérateur.
+    Si aucun n'existe (première apparition du mois), utilise nb_ventes=0 / ca_ho=0
+    comme baseline cumulatif de début de mois.
+    """
+    missing = [op for op in data_j if data_j1 is None or op not in data_j1]
+    if not missing:
+        return data_j1
+
+    result = dict(data_j1) if data_j1 else {}
+
+    same_month_prior = sorted(
+        [d for d in all_xls if d < date_j and d.year == date_j.year and d.month == date_j.month],
+        reverse=True,
+    )
+
+    _cache: dict = {}
+
+    def _load_xls(d):
+        if d not in _cache:
+            try:
+                _cache[d] = parse_xls(all_xls[d], ignore_list)
+            except Exception as exc:
+                logger.warning('build_j1_with_fallback : impossible de lire XLS %s : %s', d, exc)
+                _cache[d] = {}
+        return _cache[d]
+
+    for op_id in missing:
+        fallback_vals = None
+        for d in same_month_prior:
+            fb = _load_xls(d)
+            if op_id in fb:
+                fallback_vals = fb[op_id]
+                logger.info(
+                    'Fallback J-1 op %s : XLS %s utilisé (absent du J-1 direct)',
+                    op_id, d.isoformat(),
+                )
+                break
+
+        if fallback_vals is None:
+            fallback_vals = {'nom': data_j[op_id]['nom'], 'nb_ventes': 0.0, 'ca_ho': 0.0}
+            logger.info(
+                'Op %s absent de tous les XLS du mois — baseline 0 utilisé',
+                op_id,
+            )
+
+        result[op_id] = fallback_vals
 
     return result
 

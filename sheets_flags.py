@@ -16,13 +16,30 @@ _EXCEL_EPOCH = date(1899, 12, 30)
 
 def _normalize_date_str(v) -> str:
     """Convertit un serial Excel ou une date formatée en ISO 'YYYY-MM-DD'."""
+    import re
+    s = str(v).strip()
+    # Format français DD/MM/YYYY → YYYY-MM-DD
+    m = re.match(r'^(\d{2})/(\d{2})/(\d{4})$', s)
+    if m:
+        return f'{m.group(3)}-{m.group(2)}-{m.group(1)}'
+    # Serial Excel
     try:
-        n = int(float(str(v)))
+        n = int(float(s))
         if n > 40000:
             return (_EXCEL_EPOCH + timedelta(days=n)).isoformat()
     except (ValueError, TypeError):
         pass
-    return str(v)
+    return s
+
+
+def _normalize_year_month(v) -> str:
+    """Convertit YYYYMM compact (ex: '202606') en YYYY-MM ('2026-06')."""
+    import re
+    s = str(v).strip()
+    if re.match(r'^\d{6}$', s):
+        return f'{s[:4]}-{s[4:]}'
+    return s
+
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +222,10 @@ def _compute_sous_cible_3j(
     True si les 3 derniers jours travaillés (incluant aujourd'hui) sont tous sous la cible.
     Moins de 3 jours travaillés → False.
     """
+    # Alerte non pertinente si l'opérateur est absent aujourd'hui
+    if not _is_working(today_row):
+        return False
+
     if cible == 0:
         return False
 
@@ -212,8 +233,7 @@ def _compute_sous_cible_3j(
     worked_kpis: list[Optional[float]] = []
 
     # Aujourd'hui
-    if _is_working(today_row):
-        worked_kpis.append(_f(today_row.get(kpi_field)))
+    worked_kpis.append(_f(today_row.get(kpi_field)))
 
     # Passé
     past_dates = sorted(
@@ -263,7 +283,7 @@ def compute_and_push_flags(
     today_ids = {str(r['operateur_id']) for r in today_rows}
     historical = [
         r for r in sheets_data
-        if not (r.get('date') == date_str and r.get('operateur_id') in today_ids)
+        if not (_normalize_date_str(r.get('date', '')) == date_str and str(r.get('operateur_id', '')) in today_ids)
     ]
     today_normalized = [_normalize_row(r) for r in today_rows]
     all_data = historical + today_normalized
@@ -276,7 +296,7 @@ def compute_and_push_flags(
     targets_raw = read_sheet(service, spreadsheet_id, TARGETS_SHEET)
     targets_map: dict[tuple, dict] = {}
     for t in targets_raw:
-        key = (t.get('annee_mois', ''), str(t.get('operateur_id', '')))
+        key = (_normalize_year_month(t.get('annee_mois', '')), str(t.get('operateur_id', '')))
         targets_map[key] = {
             'cible_PMHO':              _f(t.get('cible_PMHO'))                     or 0.0,
             'cible_taux_PCA':          _f(t.get('cible_taux_PCA'))                 or 0.0,
@@ -355,15 +375,12 @@ def compute_and_push_flags(
         obj_pca  = bool(taux_mois and cible_taux_PCA > 0
                         and (sum(taux_mois) / len(taux_mois)) >= cible_taux_PCA)
 
-        # 5b. Ratio trajectoire mensuelle glissante
-        # ratio = moyenne_cumulée / (cible_mensuelle × jours_travaillés / jours_ouvrés_totaux)
+        # 5b. Ratio trajectoire mensuelle glissante : avg / cible
+        # (ratio > 1 = au-dessus de la cible, < 1 = en dessous)
         def _traj_ratio(vals, cible, jours_ouvres):
-            if not vals or cible == 0 or jours_ouvres == 0:
+            if not vals or cible == 0:
                 return None
-            cible_traj = cible * (len(vals) / jours_ouvres)
-            if cible_traj == 0:
-                return None
-            return round((sum(vals) / len(vals)) / cible_traj, 4)
+            return round((sum(vals) / len(vals)) / cible, 4)
 
         _tr_pmho = _traj_ratio(pmho_mois, cible_PMHO,     jours_ouvres)
         _tr_pca  = _traj_ratio(taux_mois, cible_taux_PCA, jours_ouvres)

@@ -122,7 +122,7 @@ PWA (GitHub Pages)
 ## Ce qui reste à faire
 
 ### En cours / beta test
-- [ ] **DÉPLOYER** les fichiers TRANSFERT/ sur le serveur (sessions 6-10 : main.py, parser_xls.py, sheets_push.py, sheets_flags.py, config/operators.json)
+- [ ] **DÉPLOYER** les fichiers TRANSFERT/ sur le serveur. Constat 2026-09-21 : le serveur tournait sur la lignée racine (main.py mono-date du 17/06) — multi-XLS, passage de mois et fallback J-1 n'avaient JAMAIS été déployés → chaque 1er du mois faux (J-1 = XLS du mois précédent → delta négatif → 0 vente + PMHO ≈ mois précédent). Session 15 : `main.py` fusionné (multi-XLS limité à `CATCHUP_DAYS = 10` jours + sleep 30s + alerte email, y compris XLS J manquant → exit 1) ; racine et TRANSFERT/ désormais identiques. À copier : tous les `*.py` de TRANSFERT/ (**pas** `config/` : settings.json du serveur à garder ; `operators.json` serveur n'ignore pas encore "9 MARCAGGI PAULE" — à décider)
 - [ ] **DÉPLOYER** `watchdog.py` sur le serveur + créer tâche planifiée Windows à 01h00
 - [ ] Vérifier que la tâche planifiée tourne correctement chaque jour après déploiement
 - [ ] Décider opérateur 4 "AMEZQUITA" (ID=4) : ignorer ou activer dans feuille `operators`

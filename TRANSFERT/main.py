@@ -5,9 +5,12 @@ Usage :
     python main.py               # date cible = aujourd'hui
     python main.py --date 20260407
 
+Traite les XLS des CATCHUP_DAYS jours précédant la date cible (rattrapage des
+runs manqués ; les lignes déjà présentes dans Sheets sont skippées).
+
 Codes de sortie :
     0 = succès
-    1 = erreur bloquante (fichier XLS J introuvable)
+    1 = erreur bloquante (aucun XLS, ou XLS J introuvable)
 """
 
 import argparse
@@ -16,6 +19,7 @@ import json
 import logging
 import os
 import sys
+import time
 from datetime import date, datetime, timedelta
 
 from parser_xls import scan_xls_dir, find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j, build_j1_with_fallback
@@ -27,6 +31,9 @@ INPUT_DIR  = os.path.join(BASE_DIR, 'input')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
 LOGS_DIR   = os.path.join(BASE_DIR, 'logs')
 CONFIG_PATH = os.path.join(BASE_DIR, 'config', 'operators.json')
+
+# Fenêtre de rattrapage ; au-delà, utiliser --date (1 lecture Sheets par date → quota 429)
+CATCHUP_DAYS = 10
 
 CSV_FIELDS = ['date', 'operateur_id', 'operateur_nom', 'nb_ventes_comptoir_j',
               'PMHO', 'nb_PCA', 'nb_PCR', 'taux_acceptation']
@@ -126,11 +133,18 @@ def main() -> int:
 
     # --- Scan de tous les fichiers XLS disponibles ---
     all_xls = scan_xls_dir(INPUT_DIR)
-    dates_to_process = sorted(d for d in all_xls if d < target_date)
+    window_start = target_date - timedelta(days=CATCHUP_DAYS)
+    dates_to_process = sorted(d for d in all_xls if window_start <= d < target_date)
 
     if not dates_to_process:
-        logger.error('Aucun fichier XLS trouvé dans input\\ (antérieur à %s)', target_date)
+        logger.error('Aucun fichier XLS trouvé dans input\\ entre %s et %s', window_start, target_date)
         return 1
+
+    # XLS J = export de la veille du run ; absent → export AHK raté, alerte
+    date_j = target_date - timedelta(days=1)
+    xls_j_missing = date_j not in all_xls
+    if xls_j_missing:
+        logger.error('Fichier XLS J introuvable dans input\\ (au%s)', date_j.strftime('%Y%m%d'))
 
     logger.info('%d date(s) XLS à traiter : %s',
                 len(dates_to_process),
@@ -159,6 +173,7 @@ def main() -> int:
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     total_pushed  = 0
     total_skipped = 0
+    push_errors   = 0
     last_rows: list[dict] = []
     last_data_date = None
 
@@ -240,14 +255,18 @@ def main() -> int:
                 total_skipped += skipped
             except Exception as e:
                 logger.error('Sheets push échoué pour %s : %s', data_date, e)
+                push_errors += 1
 
         last_rows      = rows
         last_data_date = data_date
 
     # --- Flags : calculés une seule fois après tous les pushs ---
+    flags_ok = False
     if sheets_available and last_rows and last_data_date is not None:
+        time.sleep(30)  # laisse retomber le quota lecture Sheets (429)
         try:
             compute_and_push_flags(last_data_date, last_rows, spreadsheet_id, service)
+            flags_ok = True
             logger.info(
                 'Sheets : %d ligne(s) pushée(s), %d skippée(s), flags calculés pour %d opérateurs',
                 total_pushed, total_skipped, len(last_rows),
@@ -257,7 +276,19 @@ def main() -> int:
 
     logger.info('Run terminé — %d date(s) traitée(s), %d opérateur(s) au dernier jour',
                 len(dates_to_process), len(last_rows))
-    return 0
+
+    # --- Alerte email (uniquement en cas de problème) ---
+    sheets_error = not sheets_available or push_errors > 0
+    if sheets_error or not flags_ok or xls_j_missing:
+        try:
+            from mailer import send_alert
+            log_path = os.path.join(LOGS_DIR, f'mwps_{target_date.strftime("%Y%m%d")}.log')
+            problem  = 'XLS J introuvable — export AHK raté ?' if xls_j_missing else None
+            send_alert(target_date, log_path, total_pushed, total_skipped, flags_ok, sheets_error, problem)
+        except Exception as e:
+            logger.warning('Alerte email non envoyée : %s', e)
+
+    return 1 if xls_j_missing else 0
 
 
 if __name__ == '__main__':

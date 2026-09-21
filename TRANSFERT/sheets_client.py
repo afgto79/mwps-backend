@@ -43,7 +43,7 @@ def get_service():
     return build('sheets', 'v4', credentials=creds, cache_discovery=False)
 
 
-def api_call(callable_fn, retries: int = 3, backoff: int = 5):
+def api_call(callable_fn, retries: int = 3, backoff: int = 15):
     """
     Exécute un appel API Sheets avec retry sur 429 / 503.
     callable_fn doit être un callable sans argument (lambda ou partial).
