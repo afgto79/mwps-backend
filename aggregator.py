@@ -9,6 +9,10 @@ from datetime import date
 
 logger = logging.getLogger(__name__)
 
+# En dessous de ce nombre de ventes, la journée n'est pas une vraie journée de travail :
+# vente mise en attente par A, validée un autre jour par B sans changer le code opérateur.
+MIN_VENTES_JOUR = 5
+
 
 def aggregate(
     target_date: date,
@@ -48,6 +52,14 @@ def aggregate(
         nb_ventes_j   = nb_ventes_j_data.get(op_id)
         nb_pca = pca_data.get(op_id, 0)
         nb_pcr = pcr_data.get(op_id, 0)
+
+        # Journée fantôme → ramenée à une journée non travaillée (comme un congé)
+        if nb_ventes_j is not None and 0 < nb_ventes_j < MIN_VENTES_JOUR:
+            logger.info(
+                'Opérateur %s : %d vente(s) le %s (< %d) — journée considérée non travaillée',
+                op_id, nb_ventes_j, date_str, MIN_VENTES_JOUR,
+            )
+            nb_ventes_j, pmho, nb_pca, nb_pcr = 0, None, 0, 0
 
         total = nb_pca + nb_pcr
         taux  = round(nb_pca / total, 4) if total > 0 else None

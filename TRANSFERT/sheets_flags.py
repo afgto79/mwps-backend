@@ -63,9 +63,11 @@ FLAGS_HEADERS = [
 # ── Helpers génériques ───────────────────────────────────────────────────────
 
 def _f(v) -> Optional[float]:
-    """Convertit une valeur en float ou None."""
+    """Convertit une valeur en float ou None (accepte le format FR de Sheets : "18,5")."""
     if v is None or v == '':
         return None
+    if isinstance(v, str):
+        v = ''.join(v.split()).replace(',', '.')  # retire aussi les espaces insécables
     try:
         return float(v)
     except (TypeError, ValueError):

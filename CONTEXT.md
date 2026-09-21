@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-06-19 (session 14 — PWA : bloc "Volume PC moyen · Mois en cours" + fix barre)_
+_Mis à jour : 2026-09-21 (session 15 — journées fantômes < 5 ventes + parsing décimales FR dans les flags)_
 
 ---
 
@@ -76,6 +76,8 @@ PWA (GitHub Pages)
 - [x] `annee_mois` normalisé (`sheets_flags.py`) : `_normalize_year_month()` dans `targets_map` — gère YYYYMM compact et YYYY-MM.
 - [x] `_traj_ratio` corrigé (`sheets_flags.py`) : `avg / cible` au lieu de `avg * jo / (cible * n)` — barres trajectoire reflètent la performance réelle dès le jour 1.
 - [x] `operators.json` : `"9 MARCAGGI PAULE"` dans `ignore` — doit correspondre à la chaîne exacte du XLS (ID + nom), pas juste l'ID.
+- [x] Journées fantômes (`aggregator.py`, `MIN_VENTES_JOUR = 5`) : 0 < nb_ventes_j < 5 → ligne mise au format congé (0 vente, PMHO vide, PCA/PCR 0). Cause : vente mise en attente par A, validée un autre jour par B sans changer le code opérateur. 11 lignes historiques neutralisées dans `data` le 2026-09-21.
+- [x] `_f` (`sheets_flags.py`) accepte le format FR de Sheets ("18,5", espaces insécables) — avant, tous les PMHO/taux décimaux de l'historique et les cibles `0,67` étaient lus comme None (records, streaks, objectifs, trajectoires faussés).
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
