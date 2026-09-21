@@ -33,3 +33,7 @@ Thumbs.db
 # TRANSFERT credentials (cle privee Google/GCP)
 TRANSFERT/config/credentials.json
 TRANSFERT/config/settings.json
+
+# Mot de passe Gmail des alertes (mailer.py / watchdog.py)
+config/mail.json
+TRANSFERT/config/mail.json

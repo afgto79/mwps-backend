@@ -13,6 +13,7 @@ Logique :
      f. Envoie email dans tous les cas (succès ou échec)
 """
 
+import json
 import os
 import time
 import subprocess
@@ -34,8 +35,9 @@ WATCHDOG_LOG = os.path.join(LOGS_DIR, "watchdog.log")
 SMTP_HOST  = "smtp.gmail.com"
 SMTP_PORT  = 587
 SMTP_USER  = "pharmacie.depremont@gmail.com"
-SMTP_PASS  = "ydwxwonvprwdezsj"   # ← Mot de passe d'application Gmail (MailPMHO)
 MAIL_TO    = "pharmacie.depremont@gmail.com"
+# Mot de passe d'application Gmail (MailPMHO) — hors Git : {"smtp_password": "..."}
+MAIL_CONFIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "mail.json")
 
 AHK_TIMEOUT = 300   # secondes max d'attente fin AHK
 
@@ -117,6 +119,15 @@ def wait_for_ahk_end(size_before):
     return False
 
 
+def _load_smtp_pass():
+    """Mot de passe d'application Gmail, lu dans config/mail.json (jamais dans le code)."""
+    try:
+        with open(MAIL_CONFIG, encoding="utf-8") as f:
+            return json.load(f)["smtp_password"]
+    except (OSError, ValueError, KeyError) as e:
+        raise RuntimeError(f'{MAIL_CONFIG} absent ou sans "smtp_password" ({e})') from e
+
+
 def send_email(subject, body, attachments):
     """Envoie un email avec pièces jointes (liste de chemins PNG)."""
     try:
@@ -138,7 +149,7 @@ def send_email(subject, body, attachments):
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as srv:
             srv.starttls()
-            srv.login(SMTP_USER, SMTP_PASS)
+            srv.login(SMTP_USER, _load_smtp_pass())
             srv.sendmail(SMTP_USER, MAIL_TO, msg.as_string())
         log("[MAIL] Envoyé avec succès")
     except Exception as e:

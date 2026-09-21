@@ -63,7 +63,7 @@ PWA (GitHub Pages)
 - [x] `compute_and_push_flags` appelé une seule fois après tous les pushs (lit l'historique complet)
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
-- [x] `watchdog.py` : fallback à 01h00 — screenshot avant relance AHK, relance auto, screenshot après si échec, email dans tous les cas (succès ou échec). Capture via PowerShell natif (pas de dépendance externe). Gmail app password stocké dans le script.
+- [x] `watchdog.py` : fallback à 01h00 — screenshot avant relance AHK, relance auto, screenshot après si échec, email dans tous les cas (succès ou échec). Capture via PowerShell natif (pas de dépendance externe). Mot de passe d'application Gmail lu dans `config/mail.json` (`{"smtp_password": "..."}`, hors Git) — depuis 2026-09-21 ; l'ancien, commité en clair dans ce dépôt public, est à révoquer.
 - [x] `mailer.py` : rapport email automatique après chaque run `main.py` — screenshot + log complet dans le corps, log succès/échec dans `logs/mail.log`. Sujet : `MWPS — Run JJ/MM/YYYY — OK / PARTIEL`. Testé et fonctionnel (session 13).
 - [x] Fix quota 429 Sheets (session 13) : backoff retry `5s → 15s` (`sheets_client.py`), délai `30s` entre `push_data` et `compute_and_push_flags` (`main.py`). Isolement exception flags pour tracker `flags_ok` séparément.
 - [x] AHK v5 : `SetThreadExecutionState` anti-veille au démarrage/fin, Sleep 3000 avant popup remplacement XLS
@@ -122,7 +122,7 @@ PWA (GitHub Pages)
 ## Ce qui reste à faire
 
 ### En cours / beta test
-- [ ] **DÉPLOYER** les fichiers TRANSFERT/ sur le serveur. Constat 2026-09-21 : le serveur tournait sur la lignée racine (main.py mono-date du 17/06) — multi-XLS, passage de mois et fallback J-1 n'avaient JAMAIS été déployés → chaque 1er du mois faux (J-1 = XLS du mois précédent → delta négatif → 0 vente + PMHO ≈ mois précédent). Session 15 : `main.py` fusionné (multi-XLS limité à `CATCHUP_DAYS = 10` jours + sleep 30s + alerte email, y compris XLS J manquant → exit 1) ; racine et TRANSFERT/ désormais identiques. À copier : tous les `*.py` de TRANSFERT/ (**pas** `config/` : settings.json du serveur à garder ; `operators.json` serveur n'ignore pas encore "9 MARCAGGI PAULE" — à décider)
+- [ ] **DÉPLOYER** les fichiers TRANSFERT/ sur le serveur. Constat 2026-09-21 : le serveur tournait sur la lignée racine (main.py mono-date du 17/06) — multi-XLS, passage de mois et fallback J-1 n'avaient JAMAIS été déployés → chaque 1er du mois faux (J-1 = XLS du mois précédent → delta négatif → 0 vente + PMHO ≈ mois précédent). Session 15 : `main.py` fusionné (multi-XLS limité à `CATCHUP_DAYS = 10` jours + sleep 30s + alerte email, y compris XLS J manquant → exit 1) ; racine et TRANSFERT/ désormais identiques. À copier : tous les `*.py` de TRANSFERT/ + `config/operators.json` (décision 2026-09-21 : MARCAGGI ignorée) + créer `config/mail.json` sur le serveur. **Ne pas** copier `config/settings.json` (celui du serveur est à garder).
 - [ ] **DÉPLOYER** `watchdog.py` sur le serveur + créer tâche planifiée Windows à 01h00
 - [ ] Vérifier que la tâche planifiée tourne correctement chaque jour après déploiement
 - [ ] Décider opérateur 4 "AMEZQUITA" (ID=4) : ignorer ou activer dans feuille `operators`

@@ -9,6 +9,7 @@ Envoie après chaque exécution :
 Log des envois dans logs/mail.log (succès et échecs).
 """
 
+import json
 import logging
 import os
 import smtplib
@@ -25,8 +26,17 @@ MAIL_LOG = os.path.join(LOGS_DIR, 'mail.log')
 SMTP_HOST = 'smtp.gmail.com'
 SMTP_PORT = 587
 SMTP_USER = 'pharmacie.depremont@gmail.com'
-SMTP_PASS = 'ydwxwonvprwdezsj'
 MAIL_TO   = 'pharmacie.depremont@gmail.com'
+MAIL_CONFIG = os.path.join(BASE_DIR, 'config', 'mail.json')  # hors Git : {"smtp_password": "..."}
+
+
+def _load_smtp_pass() -> str:
+    """Mot de passe d'application Gmail, lu dans config/mail.json (jamais dans le code)."""
+    try:
+        with open(MAIL_CONFIG, encoding='utf-8') as f:
+            return json.load(f)['smtp_password']
+    except (OSError, ValueError, KeyError) as e:
+        raise RuntimeError(f'{MAIL_CONFIG} absent ou sans "smtp_password" ({e})') from e
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +151,7 @@ def send_alert(
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as srv:
             srv.starttls()
-            srv.login(SMTP_USER, SMTP_PASS)
+            srv.login(SMTP_USER, _load_smtp_pass())
             srv.sendmail(SMTP_USER, MAIL_TO, msg.as_string())
 
         _mail_log.info('[OK]    Alerte %s — %s — flags=%s', date_str, problem, 'OK' if flags_ok else 'ECHEC')
