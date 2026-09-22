@@ -240,6 +240,9 @@ def compute_pmho(data_j: dict, data_j1: dict | None) -> dict:
         elif delta_ventes < 0:
             # Cumul en baisse (vente annulée/retirée) : négatif / négatif donnerait un PMHO factice
             pmho[op_id] = None
+        elif delta_ca < 0:
+            # Avoir supérieur aux ventes du jour (01/07/2026 : -1 271,92 € sur 26 ventes)
+            pmho[op_id] = None
         else:
             pmho[op_id] = round(delta_ca / delta_ventes, 2)
 
