@@ -237,7 +237,27 @@ def compute_pmho(data_j: dict, data_j1: dict | None) -> dict:
                 "PMHO indisponible pour opérateur %s : Nb Ventes J - J-1 = 0", op_id
             )
             pmho[op_id] = None
+        elif delta_ventes < 0:
+            # Cumul en baisse (vente annulée/retirée) : négatif / négatif donnerait un PMHO factice
+            pmho[op_id] = None
         else:
             pmho[op_id] = round(delta_ca / delta_ventes, 2)
 
     return pmho
+
+
+# Un cumul mensuel ne baisse pas ; en dessous de ce ratio vs J-1, le XLS J est faux
+# (26/08/2026 : export vide ; 07/07/2026 : 44 ventes cumulées contre 258 la veille)
+ABERRANT_RATIO = 0.9
+
+
+def is_xls_aberrant(data_j: dict, data_j1: dict | None) -> tuple[bool, int, int]:
+    """
+    Compare le cumul total des ventes J et J-1 (même mois).
+    Retourne (aberrant, total_j, total_j1).
+    """
+    if not data_j1:
+        return False, 0, 0
+    total_j  = int(sum(v['nb_ventes'] for v in data_j.values()))
+    total_j1 = int(sum(v['nb_ventes'] for v in data_j1.values()))
+    return total_j < ABERRANT_RATIO * total_j1, total_j, total_j1

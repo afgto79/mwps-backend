@@ -22,7 +22,7 @@ import sys
 import time
 from datetime import date, datetime, timedelta
 
-from parser_xls import scan_xls_dir, find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j, build_j1_with_fallback
+from parser_xls import scan_xls_dir, find_xls_files, parse_xls, compute_pmho, compute_nb_ventes_j, build_j1_with_fallback, is_xls_aberrant
 from parser_txt import find_txt_file, parse_txt
 from aggregator import aggregate
 
@@ -176,13 +176,14 @@ def main() -> int:
     push_errors   = 0
     last_rows: list[dict] = []
     last_data_date = None
+    bad_dates: set = set()  # XLS aberrants : ni poussés, ni utilisés comme J-1
 
     for data_date in dates_to_process:
         xls_j_path = all_xls[data_date]
 
         # J-1 = dernier fichier disponible du même mois avant data_date
         # Si J-1 est du mois précédent → None (XLS cumul mois remis à 0, baseline 0 s'applique)
-        prev_dates = [d for d in all_xls if d < data_date]
+        prev_dates = [d for d in all_xls if d < data_date and d not in bad_dates]
         xls_j1_path = None
         if prev_dates:
             date_j1 = max(prev_dates)
@@ -212,7 +213,18 @@ def main() -> int:
             except Exception as e:
                 logger.warning('Erreur lecture XLS J-1, PMHO sera null : %s', e)
 
-        xls_j1_data      = build_j1_with_fallback(xls_data, xls_j1_data, all_xls, data_date, ignore_list)
+        aberrant, total_j, total_j1 = is_xls_aberrant(xls_data, xls_j1_data)
+        if aberrant:
+            logger.error(
+                'XLS %s aberrant : cumul %d ventes contre %d en J-1 (export vide ou faux) '
+                '— date ignorée, à ré-exporter depuis WinPharma',
+                os.path.basename(xls_j_path), total_j, total_j1,
+            )
+            bad_dates.add(data_date)
+            continue
+
+        usable_xls       = {d: p for d, p in all_xls.items() if d not in bad_dates}
+        xls_j1_data      = build_j1_with_fallback(xls_data, xls_j1_data, usable_xls, data_date, ignore_list)
         pmho_data        = compute_pmho(xls_data, xls_j1_data)
         nb_ventes_j_data = compute_nb_ventes_j(xls_data, xls_j1_data)
 
@@ -278,17 +290,23 @@ def main() -> int:
                 len(dates_to_process), len(last_rows))
 
     # --- Alerte email (uniquement en cas de problème) ---
-    sheets_error = not sheets_available or push_errors > 0
-    if sheets_error or not flags_ok or xls_j_missing:
+    sheets_error   = not sheets_available or push_errors > 0
+    xls_j_aberrant = date_j in bad_dates
+    if sheets_error or not flags_ok or xls_j_missing or xls_j_aberrant:
         try:
             from mailer import send_alert
             log_path = os.path.join(LOGS_DIR, f'mwps_{target_date.strftime("%Y%m%d")}.log')
-            problem  = 'XLS J introuvable — export AHK raté ?' if xls_j_missing else None
+            if xls_j_missing:
+                problem = 'XLS J introuvable — export AHK raté ?'
+            elif xls_j_aberrant:
+                problem = 'XLS J aberrant (cumul en baisse) — ré-exporter depuis WinPharma'
+            else:
+                problem = None
             send_alert(target_date, log_path, total_pushed, total_skipped, flags_ok, sheets_error, problem)
         except Exception as e:
             logger.warning('Alerte email non envoyée : %s', e)
 
-    return 1 if xls_j_missing else 0
+    return 1 if xls_j_missing or xls_j_aberrant else 0
 
 
 if __name__ == '__main__':

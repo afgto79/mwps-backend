@@ -63,7 +63,7 @@ PWA (GitHub Pages)
 - [x] `compute_and_push_flags` appelé une seule fois après tous les pushs (lit l'historique complet)
 - [x] Déploiement serveur via dossier TRANSFERT (copie manuelle)
 - [x] AHK compilé + tâche planifiée Windows opérationnelle
-- [x] `watchdog.py` : fallback à 01h00 — screenshot avant relance AHK, relance auto, screenshot après si échec, email dans tous les cas (succès ou échec). Capture via PowerShell natif (pas de dépendance externe). Mot de passe d'application Gmail lu dans `config/mail.json` (`{"smtp_password": "..."}`, hors Git) — depuis 2026-09-21 ; l'ancien, commité en clair dans ce dépôt public, est à révoquer.
+- [x] `watchdog.py` : fallback à 01h00 — screenshot avant relance AHK, relance auto, screenshot après si échec, email dans tous les cas (succès ou échec). Capture via PowerShell natif (pas de dépendance externe). Mot de passe d'application Gmail lu dans `config/mail.json` (`{"smtp_password": "..."}`, hors Git) — depuis 2026-09-21 ; l'ancien, commité en clair dans ce dépôt public, a été révoqué le 2026-09-21.
 - [x] `mailer.py` : rapport email automatique après chaque run `main.py` — screenshot + log complet dans le corps, log succès/échec dans `logs/mail.log`. Sujet : `MWPS — Run JJ/MM/YYYY — OK / PARTIEL`. Testé et fonctionnel (session 13).
 - [x] Fix quota 429 Sheets (session 13) : backoff retry `5s → 15s` (`sheets_client.py`), délai `30s` entre `push_data` et `compute_and_push_flags` (`main.py`). Isolement exception flags pour tracker `flags_ok` séparément.
 - [x] AHK v5 : `SetThreadExecutionState` anti-veille au démarrage/fin, Sleep 3000 avant popup remplacement XLS
@@ -78,6 +78,7 @@ PWA (GitHub Pages)
 - [x] `operators.json` : `"9 MARCAGGI PAULE"` dans `ignore` — doit correspondre à la chaîne exacte du XLS (ID + nom), pas juste l'ID.
 - [x] Journées fantômes (`aggregator.py`, `MIN_VENTES_JOUR = 5`) : 0 < nb_ventes_j < 5 → ligne mise au format congé (0 vente, PMHO vide, PCA/PCR 0). Cause : vente mise en attente par A, validée un autre jour par B sans changer le code opérateur. 11 lignes historiques neutralisées dans `data` le 2026-09-21.
 - [x] `_f` (`sheets_flags.py`) accepte le format FR de Sheets ("18,5", espaces insécables) — avant, tous les PMHO/taux décimaux de l'historique et les cibles `0,67` étaient lus comme None (records, streaks, objectifs, trajectoires faussés).
+- [x] XLS aberrant (`parser_xls.is_xls_aberrant`, `ABERRANT_RATIO = 0.9`) : si le cumul total J < 90 % du cumul J-1 (même mois), la date est ignorée (ni poussée, ni utilisée comme J-1) + ERROR ; si c'est le XLS J → email « ré-exporter depuis WinPharma » + exit 1. Cas réels : 26/08/2026 (export vide) et 07/07/2026 (44 vs 258). Le jour suivant regroupe alors 2 jours de ventes. Aussi : `compute_pmho` → None si delta ventes < 0 (plus de PMHO factice type -4,42).
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
