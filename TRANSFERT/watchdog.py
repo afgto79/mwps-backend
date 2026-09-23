@@ -3,7 +3,7 @@ watchdog.py — MWPS fallback automatique
 Planifié à 01h00 via Tâche Windows (même poste que main.py).
 
 Logique :
-  1. Vérifie si les fichiers J-1 (990, 991) sont présents dans /input
+  1. Vérifie si les fichiers J-1 (990, 991, XLS tdbbaroq) sont présents dans /input
   2. Si manquants :
      a. Capture écran AVANT relance
      b. Relance l'AHK compilé
@@ -55,16 +55,17 @@ log = logging.info
 # ── Helpers ──────────────────────────────────────────────────────
 
 def get_j1_paths():
-    """Chemins attendus pour J-1."""
+    """Chemins attendus pour J-1 (mêmes noms que l'AHK)."""
     j1 = datetime.now() - timedelta(days=1)
     date_short = j1.strftime("%d%m%Y")        # DDMMYYYY
     p990 = os.path.join(BASE_INPUT, f"990_{date_short}.TXT")
     p991 = os.path.join(BASE_INPUT, f"991_{date_short}.TXT")
-    return p990, p991, j1.strftime("%d/%m/%Y")
+    pxls = os.path.join(BASE_INPUT, f"tdbbaroq_{j1:%Y%m}_au{j1:%Y%m%d}.xls")
+    return [p990, p991, pxls], j1.strftime("%d/%m/%Y")
 
 
-def files_present(p990, p991):
-    return os.path.isfile(p990) and os.path.isfile(p991)
+def missing_files(paths):
+    return [p for p in paths if not os.path.isfile(p)]
 
 
 def take_screenshot(label):
@@ -160,15 +161,17 @@ def send_email(subject, body, attachments):
 
 def main():
     log("=== Watchdog démarré ===")
-    p990, p991, date_label = get_j1_paths()
-    log(f"Cible J-1 : {date_label} | {os.path.basename(p990)} | {os.path.basename(p991)}")
+    paths, date_label = get_j1_paths()
+    log(f"Cible J-1 : {date_label} | " + " | ".join(os.path.basename(p) for p in paths))
 
-    if files_present(p990, p991):
+    missing = missing_files(paths)
+    if not missing:
         log("Fichiers présents — aucune action requise")
         log("=== Watchdog terminé ===")
         return
 
-    log("Fichiers MANQUANTS — déclenchement du fallback")
+    log("Fichiers MANQUANTS — déclenchement du fallback : "
+        + ", ".join(os.path.basename(p) for p in missing))
 
     # 1. Screenshot avant relance
     screen_avant = take_screenshot("avant")
@@ -187,7 +190,8 @@ def main():
     log(f"[AHK] {'Terminé (log détecté)' if ahk_done else 'Timeout 5 min dépassé'}")
 
     # 4. Revérification
-    if files_present(p990, p991):
+    still_missing = missing_files(paths)
+    if not still_missing:
         log("Relance réussie — fichiers présents")
         send_email(
             subject=f"MWPS — Relance automatique réussie {date_label}",
@@ -195,9 +199,8 @@ def main():
                 f"La tâche MWPS du {date_label} avait échoué à 00h05.\n"
                 f"Le watchdog (01h00) a relancé l'AHK avec succès.\n\n"
                 f"Fichiers produits :\n"
-                f"  {p990}\n"
-                f"  {p991}\n\n"
-                f"Capture d'écran avant relance en pièce jointe."
+                + "".join(f"  {p}\n" for p in missing)
+                + f"\nCapture d'écran avant relance en pièce jointe."
             ),
             attachments=[screen_avant],
         )
@@ -211,9 +214,8 @@ def main():
                 f"  • 00h05 : échec initial (AHK planifié)\n"
                 f"  • 01h00 : échec relance automatique (watchdog)\n\n"
                 f"Fichiers manquants :\n"
-                f"  {p990}\n"
-                f"  {p991}\n\n"
-                f"Relancer MWPS manuellement dès que possible.\n\n"
+                + "".join(f"  {p}\n" for p in still_missing)
+                + f"\nRelancer MWPS manuellement dès que possible.\n\n"
                 f"Captures d'écran en pièces jointes :\n"
                 f"  • avant relance (ce qui bloquait à 01h00)\n"
                 f"  • après relance (état final)"
