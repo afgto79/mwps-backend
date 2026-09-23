@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-09-21 (session 15 — journées fantômes < 5 ventes + parsing décimales FR dans les flags)_
+_Mis à jour : 2026-09-23 (watchdog : relance aussi si le XLS J-1 manque)_
 
 ---
 
@@ -80,6 +80,7 @@ PWA (GitHub Pages)
 - [x] `_f` (`sheets_flags.py`) accepte le format FR de Sheets ("18,5", espaces insécables) — avant, tous les PMHO/taux décimaux de l'historique et les cibles `0,67` étaient lus comme None (records, streaks, objectifs, trajectoires faussés).
 - [x] XLS aberrant (`parser_xls.is_xls_aberrant`, `ABERRANT_RATIO = 0.9`) : si le cumul total J < 90 % du cumul J-1 (même mois), la date est ignorée (ni poussée, ni utilisée comme J-1) + ERROR ; si c'est le XLS J → email « ré-exporter depuis WinPharma » + exit 1. Cas réels : 26/08/2026 (export vide) et 07/07/2026 (44 vs 258). Le jour suivant regroupe alors 2 jours de ventes. Aussi : `compute_pmho` → None si delta ventes < 0 (plus de PMHO factice type -4,42).
 - [x] Réparation historique `data` (2026-09-22) : 1ers du mois (02/05, 01/06, 01/07, 01/08, 01/09) recalculés avec baseline 0 ; XLS aberrants 07/07 et 26/08 → ventes regroupées sur 08/07 et 27/08 (sauf DUCHE 07/07, cumul cohérent, conservée) ; doublons 01/08 supprimés ; PMHO factices (0 vente) vidés ; PMHO négatif (avoir > ventes) vidé pour 01/07 CARUANA. 18/08 DE PREMONT -3,21 vidé aussi. `compute_pmho` → None si CA du jour < 0 (avoir > ventes).
+- [x] Watchdog (`watchdog.py`, 2026-09-23) : vérifie aussi `tdbbaroq_YYYYMM_auYYYYMMDD.xls`, pas seulement 990/991. Cas réel : nuit du 23/09, l'enregistrement du XLS a échoué (popup Pharmacade probable pendant « Enregistrer sous ») mais les TXT étaient là → aucune relance. 22/09 récupéré par relance manuelle de l'AHK à 09h04. Popup Pharmacade à désactiver sur le serveur ; AHK inchangé (décision utilisateur).
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
