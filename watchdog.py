@@ -5,7 +5,7 @@ Planifié à 01h00 via Tâche Windows (même poste que main.py).
 Logique :
   1. Vérifie si les fichiers J-1 (990, 991, XLS tdbbaroq) sont présents dans /input
   2. Si manquants :
-     a. Capture écran AVANT relance
+     a. Capture écran AVANT relance (+ fermeture d'Excel si c'est le XLS qui manque)
      b. Relance l'AHK compilé
      c. Attend fin AHK (poll ahk.log, timeout 5 min)
      d. Revérifie les fichiers
@@ -98,6 +98,19 @@ def take_screenshot(label):
         return None
 
 
+def close_excel():
+    """Ferme de force toutes les fenêtres Excel (modifications non enregistrées perdues)."""
+    try:
+        r = subprocess.run(
+            ["taskkill", "/F", "/IM", "EXCEL.EXE"],
+            timeout=15, capture_output=True, text=True,
+        )
+        log(f"[EXCEL] taskkill code {r.returncode} : {(r.stdout or r.stderr).strip()}")
+        time.sleep(3)
+    except Exception as e:
+        log(f"[EXCEL] Erreur fermeture : {e}")
+
+
 def get_ahk_log_size():
     try:
         return os.path.getsize(AHK_LOG)
@@ -175,6 +188,11 @@ def main():
 
     # 1. Screenshot avant relance
     screen_avant = take_screenshot("avant")
+
+    # 1b. XLS raté → le classeur (voire « Enregistrer sous ») est resté ouvert :
+    #     fermer Excel pour que l'AHK reparte d'un état propre
+    if any(p.lower().endswith(".xls") for p in missing):
+        close_excel()
 
     # 2. Relance AHK
     log(f"Relance AHK : {AHK_EXE}")
