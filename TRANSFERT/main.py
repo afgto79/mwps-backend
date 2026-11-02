@@ -274,7 +274,11 @@ def main() -> int:
 
     # --- Flags : calculés une seule fois après tous les pushs ---
     flags_ok = False
-    if sheets_available and last_rows and last_data_date is not None:
+    if last_data_date is not None and not last_rows:
+        # XLS du dernier jour vide = 1er du mois fermé (cumul remis à 0) : rien à calculer, pas une erreur
+        logger.info('Aucun opérateur le %s (jour fermé ?) — flags non recalculés', last_data_date)
+        flags_ok = True
+    elif sheets_available and last_rows and last_data_date is not None:
         time.sleep(30)  # laisse retomber le quota lecture Sheets (429)
         try:
             compute_and_push_flags(last_data_date, last_rows, spreadsheet_id, service)

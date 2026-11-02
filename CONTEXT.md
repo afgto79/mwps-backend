@@ -1,5 +1,5 @@
 # MWPS — Contexte projet
-_Mis à jour : 2026-09-23 (watchdog : relance aussi si le XLS J-1 manque)_
+_Mis à jour : 2026-11-02 (1er du mois fermé : plus de fausse alerte flags)_
 
 ---
 
@@ -81,6 +81,7 @@ PWA (GitHub Pages)
 - [x] XLS aberrant (`parser_xls.is_xls_aberrant`, `ABERRANT_RATIO = 0.9`) : si le cumul total J < 90 % du cumul J-1 (même mois), la date est ignorée (ni poussée, ni utilisée comme J-1) + ERROR ; si c'est le XLS J → email « ré-exporter depuis WinPharma » + exit 1. Cas réels : 26/08/2026 (export vide) et 07/07/2026 (44 vs 258). Le jour suivant regroupe alors 2 jours de ventes. Aussi : `compute_pmho` → None si delta ventes < 0 (plus de PMHO factice type -4,42).
 - [x] Réparation historique `data` (2026-09-22) : 1ers du mois (02/05, 01/06, 01/07, 01/08, 01/09) recalculés avec baseline 0 ; XLS aberrants 07/07 et 26/08 → ventes regroupées sur 08/07 et 27/08 (sauf DUCHE 07/07, cumul cohérent, conservée) ; doublons 01/08 supprimés ; PMHO factices (0 vente) vidés ; PMHO négatif (avoir > ventes) vidé pour 01/07 CARUANA. 18/08 DE PREMONT -3,21 vidé aussi. `compute_pmho` → None si CA du jour < 0 (avoir > ventes).
 - [x] Watchdog (`watchdog.py`, 2026-09-23) : vérifie aussi `tdbbaroq_YYYYMM_auYYYYMMDD.xls`, pas seulement 990/991. Cas réel : nuit du 23/09, l'enregistrement du XLS a échoué (popup Pharmacade probable pendant « Enregistrer sous ») mais les TXT étaient là → aucune relance. 22/09 récupéré par relance manuelle de l'AHK à 09h04. Popup Pharmacade à désactiver sur le serveur ; AHK inchangé (décision utilisateur).
+- [x] 1er du mois fermé (`main.py`, 2026-11-02) : le XLS cumul du mois est alors vide (0 opérateur) → flags non recalculés **sans** alerte. Avant, `flags_ok=False` → email trompeur « Flags non calculés (quota 429 ou erreur API) ». Cas réel : 01/11/2026 (dimanche + Toussaint). Même weekend : XLS du 31/10 jamais enregistré (échec Excel 00:05 puis enregistrement raté à la relance watchdog, Excel resté ouvert) → 31/10 absent de `data`, à récupérer par export manuel + `main.py --date 20261101`.
 
 ### PWA opérateur (afgto79/mwps)
 - [x] Dashboard par opérateur (`?op=X`)
